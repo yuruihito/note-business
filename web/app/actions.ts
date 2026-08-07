@@ -51,6 +51,55 @@ export async function submitRequest(
   redirect("/requests");
 }
 
+export type OfficeRequestState = { error?: string; ok?: boolean } | undefined;
+
+export async function submitOfficeRequest(
+  _prevState: OfficeRequestState,
+  formData: FormData
+): Promise<OfficeRequestState> {
+  if (!(await hasValidSession())) redirect("/login");
+
+  const text = String(formData.get("text") ?? "").trim();
+  if (!text) {
+    return { error: "内容を入力してください" };
+  }
+
+  const supabase = getSupabase();
+  const { error } = await supabase.from("requests").insert({ text });
+  if (error) {
+    return { error: `保存に失敗しました: ${error.message}` };
+  }
+
+  revalidatePath("/requests");
+  revalidatePath("/");
+  revalidatePath("/office");
+  return { ok: true };
+}
+
+export async function updateOfficeNames(
+  _prevState: OfficeRequestState,
+  formData: FormData
+): Promise<OfficeRequestState> {
+  if (!(await hasValidSession())) redirect("/login");
+
+  const supabase = getSupabase();
+  const depts = ["cmo", "cfo", "ceo"] as const;
+
+  for (const dept of depts) {
+    const name = String(formData.get(dept) ?? "").trim();
+    if (!name) continue;
+
+    const { error } = await supabase.from("office_profiles").upsert(
+      { dept, display_name: name, updated_at: new Date().toISOString() },
+      { onConflict: "dept" }
+    );
+    if (error) return { error: `保存に失敗しました: ${error.message}` };
+  }
+
+  revalidatePath("/office");
+  return { ok: true };
+}
+
 export async function decideIdea(formData: FormData) {
   if (!(await hasValidSession())) redirect("/login");
 

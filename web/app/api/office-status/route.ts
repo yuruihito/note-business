@@ -1,9 +1,16 @@
 import { hasValidSession } from "@/lib/auth";
-import { listIdeas, listRequests } from "@/lib/data";
+import { getOfficeNames, listIdeas, listRequests } from "@/lib/data";
 
 export type DeptStatus = {
   status: "working" | "idle";
   message: string;
+  link: string | null;
+};
+
+export type OfficeStatusResponse = {
+  cmo: DeptStatus;
+  cfo: DeptStatus;
+  names: { cmo: string; cfo: string; ceo: string };
 };
 
 const RECENT_MS = 24 * 60 * 60 * 1000; // consider content "fresh" for 24h
@@ -17,7 +24,11 @@ export async function GET() {
     return new Response(null, { status: 401 });
   }
 
-  const [requests, ideas] = await Promise.all([listRequests(), listIdeas()]);
+  const [requests, ideas, names] = await Promise.all([
+    listRequests(),
+    listIdeas(),
+    getOfficeNames(),
+  ]);
 
   const activeRequest = requests.find(
     (r) => r.status === "queued" || r.status === "in_progress"
@@ -28,6 +39,7 @@ export async function GET() {
     cmo = {
       status: "working",
       message: `「${truncate(activeRequest.text)}」に対応中`,
+      link: "/requests",
     };
   } else {
     const latestIdea = ideas[0];
@@ -41,12 +53,18 @@ export async function GET() {
             latestIdea.status === "draft"
               ? `企画「${truncate(latestIdea.title, 28)}」を作成しました`
               : `「${truncate(latestIdea.title, 28)}」を検討中`,
+          link: `/ideas/${latestIdea.id}`,
         }
-      : { status: "idle", message: "待機中です" };
+      : { status: "idle", message: "待機中です", link: null };
   }
 
   // CFOは現時点で連携する会計データが無いため、常に待機中として正直に表示する。
-  const cfo: DeptStatus = { status: "idle", message: "経理タスクはまだありません" };
+  const cfo: DeptStatus = {
+    status: "idle",
+    message: "経理タスクはまだありません",
+    link: null,
+  };
 
-  return Response.json({ cmo, cfo });
+  const response: OfficeStatusResponse = { cmo, cfo, names };
+  return Response.json(response);
 }

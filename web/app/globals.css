@@ -292,24 +292,27 @@ button:disabled {
 .office-wrap {
   position: relative;
   width: 100%;
-  max-width: 640px;
-  margin: 0 auto;
-  aspect-ratio: 200 / 120;
+  aspect-ratio: 16 / 10;
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  background: #e7ddc8;
+  background: #cfe3ea;
+  touch-action: none;
 }
 
-.office-canvas {
+.office-wrap canvas {
   display: block;
-  width: 100%;
-  height: 100%;
-  image-rendering: pixelated;
+  outline: none;
+}
+
+.office-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
 }
 
 .office-bubble {
-  position: absolute;
   transform: translate(-50%, -100%);
   max-width: 130px;
   padding: 0.3rem 0.5rem;
@@ -317,17 +320,19 @@ button:disabled {
   border-radius: 8px;
   background: var(--card);
   color: var(--foreground);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   line-height: 1.3;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   pointer-events: none;
+  white-space: normal;
+  text-align: center;
 }
 
 .office-bubble strong {
   display: block;
   margin-bottom: 0.1rem;
   color: var(--muted);
-  font-size: 0.65rem;
+  font-size: 0.6rem;
 }
 
 .office-bubble.working {
@@ -335,5 +340,70 @@ button:disabled {
 }
 
 .office-bubble.idle {
-  opacity: 0.7;
+  opacity: 0.75;
+}
+
+.office-bubble.chatter {
+  border-color: #a78bfa;
+}
+
+.office-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 0.75rem;
+  transform: translateX(-50%);
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 0.75rem;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.office-controls-hint {
+  margin-top: 0.6rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.office-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  z-index: 50;
+}
+
+.office-modal {
+  width: 100%;
+  max-width: 400px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.office-modal h2 {
+  font-size: 1.05rem;
+  margin-bottom: 0.9rem;
+}
+
+.office-panel {
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  background: var(--card);
+}
+
+.office-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
 }

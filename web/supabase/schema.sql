@@ -38,3 +38,20 @@ create policy "anon can update requests" on requests for update using (true);
 create policy "anon can read content_ideas" on content_ideas for select using (true);
 create policy "anon can insert content_ideas" on content_ideas for insert with check (true);
 create policy "anon can update content_ideas" on content_ideas for update using (true);
+
+-- Display names for the virtual office avatars (CMO / CFO / CEO).
+create table if not exists office_profiles (
+  dept text primary key check (dept in ('cmo', 'cfo', 'ceo')),
+  display_name text not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table office_profiles enable row level security;
+
+create policy "anon can read office_profiles" on office_profiles for select using (true);
+create policy "anon can insert office_profiles" on office_profiles for insert with check (true);
+create policy "anon can update office_profiles" on office_profiles for update using (true);
+
+insert into office_profiles (dept, display_name) values
+  ('cmo', 'CMO'), ('cfo', 'CFO'), ('ceo', '社長')
+on conflict (dept) do nothing;

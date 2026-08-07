@@ -22,3 +22,11 @@ export type ContentIdea = {
   created_at: string;
   updated_at: string;
 };
+
+export type OfficeDept = "cmo" | "cfo" | "ceo";
+
+export type OfficeProfile = {
+  dept: OfficeDept;
+  display_name: string;
+  updated_at: string;
+};

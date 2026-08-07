@@ -1,6 +1,6 @@
 import "server-only";
 import { getSupabase } from "./supabase";
-import type { CeoRequest, ContentIdea } from "./types";
+import type { CeoRequest, ContentIdea, OfficeDept, OfficeProfile } from "./types";
 
 export async function listRequests(): Promise<CeoRequest[]> {
   const supabase = getSupabase();
@@ -31,4 +31,22 @@ export async function getIdea(id: string): Promise<ContentIdea | null> {
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data;
+}
+
+const DEFAULT_OFFICE_NAMES: Record<OfficeDept, string> = {
+  cmo: "CMO",
+  cfo: "CFO",
+  ceo: "社長",
+};
+
+export async function getOfficeNames(): Promise<Record<OfficeDept, string>> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.from("office_profiles").select("*");
+  if (error) throw new Error(error.message);
+
+  const names = { ...DEFAULT_OFFICE_NAMES };
+  for (const row of (data ?? []) as OfficeProfile[]) {
+    names[row.dept] = row.display_name;
+  }
+  return names;
 }

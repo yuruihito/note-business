@@ -17,6 +17,7 @@ async function Nav() {
     <nav className="nav">
       <span className="nav-brand">AI-CEO</span>
       <Link href="/">状況</Link>
+      <Link href="/office">オフィス</Link>
       <Link href="/ideas">企画</Link>
       <Link href="/requests">依頼</Link>
       <form action={logout}>

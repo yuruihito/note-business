@@ -1,5 +1,6 @@
 import { hasValidSession } from "@/lib/auth";
 import { getOfficeNames, listIdeas, listRequests } from "@/lib/data";
+import type { RequestStatus } from "@/lib/types";
 
 export type DeptStatus = {
   status: "working" | "idle";
@@ -7,10 +8,24 @@ export type DeptStatus = {
   link: string | null;
 };
 
+export type ActiveRequestSummary = {
+  id: string;
+  text: string;
+  status: RequestStatus;
+};
+
+export type DraftIdeaSummary = {
+  id: string;
+  title: string;
+  summary: string;
+};
+
 export type OfficeStatusResponse = {
   cmo: DeptStatus;
   cfo: DeptStatus;
   names: { cmo: string; cfo: string; ceo: string };
+  activeRequest: ActiveRequestSummary | null;
+  draftIdeas: DraftIdeaSummary[];
 };
 
 const RECENT_MS = 24 * 60 * 60 * 1000; // consider content "fresh" for 24h
@@ -65,6 +80,19 @@ export async function GET() {
     link: null,
   };
 
-  const response: OfficeStatusResponse = { cmo, cfo, names };
+  const draftIdeas: DraftIdeaSummary[] = ideas
+    .filter((i) => i.status === "draft")
+    .slice(0, 5)
+    .map((i) => ({ id: i.id, title: i.title, summary: truncate(i.summary, 60) }));
+
+  const response: OfficeStatusResponse = {
+    cmo,
+    cfo,
+    names,
+    activeRequest: activeRequest
+      ? { id: activeRequest.id, text: activeRequest.text, status: activeRequest.status }
+      : null,
+    draftIdeas,
+  };
   return Response.json(response);
 }

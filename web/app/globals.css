@@ -8,6 +8,7 @@
   --accent-foreground: #ffffff;
   --danger: #dc2626;
   --success: #16a34a;
+  --panel-bg: rgba(255, 255, 255, 0.72);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,6 +22,7 @@
     --accent-foreground: #0a0a0a;
     --danger: #f87171;
     --success: #4ade80;
+    --panel-bg: rgba(20, 20, 20, 0.6);
   }
 }
 
@@ -104,6 +106,10 @@ main {
   max-width: 720px;
   margin: 0 auto;
   padding: 1.5rem 1.25rem 3rem;
+}
+
+main:has(.office-layout) {
+  max-width: 1080px;
 }
 
 h1 {
@@ -314,25 +320,56 @@ button:disabled {
 
 .office-bubble {
   transform: translate(-50%, -100%);
-  max-width: 130px;
-  padding: 0.3rem 0.5rem;
+  width: max-content;
+  min-width: 140px;
+  max-width: 260px;
+  padding: 0.35rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--card);
   color: var(--foreground);
-  font-size: 0.68rem;
-  line-height: 1.3;
+  font-size: 0.72rem;
+  line-height: 1.35;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   pointer-events: none;
   white-space: normal;
-  text-align: center;
+  text-align: left;
+}
+
+.office-bubble-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.15rem;
 }
 
 .office-bubble strong {
-  display: block;
-  margin-bottom: 0.1rem;
-  color: var(--muted);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.office-status-pill {
+  flex-shrink: 0;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
   font-size: 0.6rem;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.office-status-pill.working {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.office-status-pill.idle {
+  color: var(--muted);
+}
+
+.office-bubble-msg {
+  display: block;
+  color: var(--foreground);
 }
 
 .office-bubble.working {
@@ -340,7 +377,7 @@ button:disabled {
 }
 
 .office-bubble.idle {
-  opacity: 0.75;
+  opacity: 0.85;
 }
 
 .office-bubble.chatter {
@@ -406,4 +443,145 @@ button:disabled {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.6rem;
+}
+
+.office-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 900px) {
+  .office-layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+  }
+}
+
+.office-main {
+  min-width: 0;
+}
+
+.hud-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  max-height: 720px;
+  overflow-y: auto;
+}
+
+.hud-heading {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.6rem;
+}
+
+.hud-member {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.hud-member:last-child {
+  border-bottom: none;
+}
+
+.hud-face {
+  flex-shrink: 0;
+  border-radius: 999px;
+}
+
+.hud-member-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.hud-member-msg {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-top: 0.1rem;
+}
+
+.hud-request-text {
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.hud-empty {
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.progress-bar {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.progress-step {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+}
+
+.progress-step.done {
+  background: var(--accent);
+}
+
+.progress-step.failed {
+  background: var(--danger);
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.hud-idea-row {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.hud-idea-row:last-child {
+  border-bottom: none;
+}
+
+.hud-idea-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.hud-idea-summary {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 0.2rem 0 0.5rem;
+}
+
+.hud-idea-row .actions-row {
+  margin-top: 0;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hud-idea-row button {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+}
+
+.hud-idea-link {
+  font-size: 0.78rem;
+  color: var(--accent);
+  text-decoration: none;
 }

@@ -106,6 +106,7 @@ export async function decideIdea(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const decision = String(formData.get("decision") ?? "");
   const reason = String(formData.get("reason") ?? "").trim() || null;
+  const returnTo = String(formData.get("returnTo") ?? "/ideas");
 
   if (!id || (decision !== "approved" && decision !== "rejected")) {
     throw new Error("invalid decision payload");
@@ -126,5 +127,6 @@ export async function decideIdea(formData: FormData) {
   revalidatePath("/ideas");
   revalidatePath(`/ideas/${id}`);
   revalidatePath("/");
-  redirect("/ideas");
+  revalidatePath("/office");
+  redirect(returnTo);
 }

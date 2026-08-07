@@ -9,6 +9,7 @@ import { PERSONALITIES, pickIdleLine, type OfficeDeptKey } from "@/lib/office-fl
 import RequestModal from "./request-modal";
 import DetailPanel from "./detail-panel";
 import NameSettings from "./name-settings";
+import HudPanel from "./hud-panel";
 
 type Vec3 = [number, number, number];
 
@@ -27,6 +28,8 @@ const DEFAULT_STATUS: OfficeStatusResponse = {
   cmo: { status: "idle", message: "読み込み中...", link: null },
   cfo: { status: "idle", message: "読み込み中...", link: null },
   names: { cmo: "CMO", cfo: "CFO", ceo: "社長" },
+  activeRequest: null,
+  draftIdeas: [],
 };
 
 function desiredWaypoints(status: DeptStatus, dept: OfficeDeptKey): Vec3[] {
@@ -193,6 +196,18 @@ function Avatar({
         <sphereGeometry args={[0.26, 16, 16]} />
         <meshStandardMaterial color="#f3d9b1" />
       </mesh>
+      <mesh position={[-0.09, 1.32, 0.22]}>
+        <sphereGeometry args={[0.035, 8, 8]} />
+        <meshStandardMaterial color="#2b2b2b" />
+      </mesh>
+      <mesh position={[0.09, 1.32, 0.22]}>
+        <sphereGeometry args={[0.035, 8, 8]} />
+        <meshStandardMaterial color="#2b2b2b" />
+      </mesh>
+      <mesh position={[0, 1.19, 0.24]} rotation={[0, 0, Math.PI / 2]}>
+        <capsuleGeometry args={[0.01, 0.09, 4, 6]} />
+        <meshStandardMaterial color="#b5654f" />
+      </mesh>
       {crown && (
         <mesh castShadow position={[0, 1.56, 0]}>
           <coneGeometry args={[0.16, 0.22, 6]} />
@@ -313,8 +328,13 @@ function NpcCharacter({
       </mesh>
       <Html position={[0, 1.9, 0]} center pointerEvents="none">
         <div className={`office-bubble ${bubbleKind}`}>
-          <strong>{name}</strong>
-          <span>{bubbleText}</span>
+          <div className="office-bubble-head">
+            <strong>{name}</strong>
+            <span className={`office-status-pill ${status.status}`}>
+              {status.status === "working" ? "作業中" : "休憩中"}
+            </span>
+          </div>
+          <span className="office-bubble-msg">{bubbleText}</span>
         </div>
       </Html>
     </group>
@@ -375,8 +395,10 @@ function CeoCharacter({
       <Avatar color="#a78bfa" crown />
       <Html position={[0, 1.9, 0]} center pointerEvents="none">
         <div className="office-bubble idle">
-          <strong>{name}</strong>
-          <span>WASDで移動</span>
+          <div className="office-bubble-head">
+            <strong>{name}</strong>
+          </div>
+          <span className="office-bubble-msg">WASDで移動</span>
         </div>
       </Html>
     </group>
@@ -466,7 +488,8 @@ export default function OfficeScene3D() {
   }, []);
 
   return (
-    <>
+    <div className="office-layout">
+      <div className="office-main">
       <div className="office-toolbar">
         <button type="button" className="secondary" onClick={() => setShowSettings(true)}>
           ⚙ 名前を編集
@@ -531,6 +554,9 @@ export default function OfficeScene3D() {
           onClose={() => setSelectedDept(null)}
         />
       )}
+      </div>
+
+      <HudPanel status={status} />
 
       {showRequestModal && (
         <RequestModal onClose={() => setShowRequestModal(false)} />
@@ -538,6 +564,6 @@ export default function OfficeScene3D() {
       {showSettings && (
         <NameSettings names={status.names} onClose={() => setShowSettings(false)} />
       )}
-    </>
+    </div>
   );
 }

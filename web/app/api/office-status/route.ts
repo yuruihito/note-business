@@ -1,5 +1,12 @@
 import { hasValidSession } from "@/lib/auth";
-import { getOfficeNames, listActivityLog, listIdeas, listRequests } from "@/lib/data";
+import {
+  EDITORIAL_GUIDELINES_KEY,
+  getOfficeNames,
+  getSetting,
+  listActivityLog,
+  listIdeas,
+  listRequests,
+} from "@/lib/data";
 import type { ActivityLogEntry, RequestStatus } from "@/lib/types";
 
 export type DeptStatus = {
@@ -31,6 +38,7 @@ export type OfficeStatusResponse = {
   pendingRequestCount: number;
   suggestHiring: boolean;
   recentActivity: ActivityLogEntry[];
+  editorialGuidelines: string;
 };
 
 const RECENT_MS = 24 * 60 * 60 * 1000; // consider content "fresh" for 24h
@@ -45,11 +53,12 @@ export async function GET() {
     return new Response(null, { status: 401 });
   }
 
-  const [requests, ideas, names, recentActivity] = await Promise.all([
+  const [requests, ideas, names, recentActivity, editorialGuidelines] = await Promise.all([
     listRequests(),
     listIdeas(),
     getOfficeNames(),
     listActivityLog(15),
+    getSetting(EDITORIAL_GUIDELINES_KEY),
   ]);
 
   const pendingRequests = requests.filter(
@@ -129,6 +138,7 @@ export async function GET() {
     pendingRequestCount: pendingRequests.length,
     suggestHiring: pendingRequests.length >= HIRING_SUGGESTION_THRESHOLD,
     recentActivity,
+    editorialGuidelines: editorialGuidelines ?? "",
   };
   return Response.json(response);
 }

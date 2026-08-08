@@ -435,6 +435,17 @@ button:disabled {
   margin-bottom: 0.9rem;
 }
 
+.office-modal:has(#editorial-guidelines) {
+  max-width: 560px;
+}
+
+.office-modal-hint {
+  font-size: 0.82rem;
+  color: var(--muted, #6b7280);
+  margin: -0.4rem 0 0.9rem;
+  line-height: 1.5;
+}
+
 .office-panel {
   margin-top: 1rem;
   border: 1px solid var(--border);

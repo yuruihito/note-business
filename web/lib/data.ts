@@ -8,6 +8,8 @@ import type {
   OfficeProfile,
 } from "./types";
 
+export const EDITORIAL_GUIDELINES_KEY = "editorial_guidelines";
+
 export async function listRequests(): Promise<CeoRequest[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -67,4 +69,15 @@ export async function getOfficeNames(): Promise<Record<OfficeDept, string>> {
     names[row.dept] = row.display_name;
   }
   return names;
+}
+
+export async function getSetting(key: string): Promise<string | null> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", key)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.value ?? null;
 }

@@ -14,10 +14,13 @@ import {
 import RequestModal from "./request-modal";
 import DetailPanel from "./detail-panel";
 import NameSettings from "./name-settings";
+import EditorialSettings from "./editorial-settings";
 import HudPanel from "./hud-panel";
 
 type Vec3 = [number, number, number];
-type Waypoint = { pos: Vec3; sit?: boolean };
+// `facing` (radians, Y rotation) only matters when `sit` is true: standing
+// waypoints keep whatever direction the walk-in movement produced.
+type Waypoint = { pos: Vec3; sit?: boolean; facing?: number };
 
 // Desks are arranged in one neat, evenly-spaced row.
 const CMO_DESK: Vec3 = [-5, 0, 2.5];
@@ -94,14 +97,14 @@ function shortestAngleLerp(current: number, target: number, t: number) {
 // characters never cross paths or stack on top of one another.
 const IDLE_POOLS: Record<OfficeDeptKey, Waypoint[]> = {
   cmo: [
-    { pos: [-0.7, 0, 4.7], sit: true },
-    { pos: [-0.7, 0, 4.7], sit: true },
+    { pos: [-0.7, 0, 4.7], sit: true, facing: Math.PI },
+    { pos: [-0.7, 0, 4.7], sit: true, facing: Math.PI },
     { pos: [-2.3, 0, 3.7], sit: false },
     { pos: [-1.2, 0, 3.9], sit: false },
   ],
   cfo: [
-    { pos: [0.7, 0, 4.7], sit: true },
-    { pos: [0.7, 0, 4.7], sit: true },
+    { pos: [0.7, 0, 4.7], sit: true, facing: Math.PI },
+    { pos: [0.7, 0, 4.7], sit: true, facing: Math.PI },
     { pos: [2.3, 0, 3.7], sit: false },
     { pos: [1.2, 0, 3.9], sit: false },
   ],
@@ -126,19 +129,22 @@ const DEFAULT_STATUS: OfficeStatusResponse = {
   pendingRequestCount: 0,
   suggestHiring: false,
   recentActivity: [],
+  editorialGuidelines: "",
 };
 
 function deskChairSpot(desk: Vec3): Vec3 {
-  // The desk's monitor faces +z, so the chair sits just outside the desk's
-  // footprint on that side instead of on top of the desk itself.
-  return [desk[0], 0, desk[2] + 0.55];
+  // The monitor sits on the +z (camera-facing) edge of the desk, so the
+  // chair is on the -z side, behind the desk — clear of its footprint
+  // (half-depth 0.4 + character radius 0.26 + margin) and facing +z, i.e.
+  // toward both the monitor and the camera.
+  return [desk[0], 0, desk[2] - 0.78];
 }
 
 function desiredWaypoints(status: DeptStatus, dept: OfficeDeptKey): Waypoint[] {
   if (status.status === "working") {
     // A single seated spot: no waypoint switching while working, so there's
     // no jitter — just the idle bob animation for a sense of life.
-    return [{ pos: deskChairSpot(DESKS[dept]), sit: true }];
+    return [{ pos: deskChairSpot(DESKS[dept]), sit: true, facing: 0 }];
   }
   return IDLE_POOLS[dept];
 }
@@ -193,11 +199,11 @@ function Desk({ position, color }: { position: Vec3; color: string }) {
         <boxGeometry args={[0.08, 0.4, 0.08]} />
         <meshStandardMaterial color="#5b3a24" />
       </mesh>
-      <mesh position={[0, 0.62, -0.25]} castShadow>
+      <mesh position={[0, 0.62, 0.25]} castShadow>
         <boxGeometry args={[0.5, 0.32, 0.03]} />
         <meshStandardMaterial color="#1f2937" />
       </mesh>
-      <mesh position={[0, 0.62, -0.25]}>
+      <mesh position={[0, 0.62, 0.25]}>
         <boxGeometry args={[0.44, 0.26, 0.01]} />
         <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.4} />
       </mesh>
@@ -550,7 +556,7 @@ function NpcCharacter({
     waitUntil: 0,
     mode: status.status,
     sitting: true,
-    facing: Math.PI, // starts seated, facing the desk/monitor
+    facing: 0, // starts seated, facing the desk/monitor
   });
   const bobSeed = useRef(0);
   const [bubbleText, setBubbleText] = useState(status.message);
@@ -604,9 +610,9 @@ function NpcCharacter({
       const dist = Math.hypot(dx, dz);
       if (dist < 0.08) {
         m.sitting = !!target.sit;
-        // Seated spots (desk chairs, sofa) are all arranged so "face into
-        // the room" reads correctly, e.g. toward the monitor at a desk.
-        if (target.sit) m.facing = Math.PI;
+        // Each seated waypoint specifies which way it faces (desk chairs
+        // look at the monitor/camera, the sofa looks back into the room).
+        if (target.sit) m.facing = target.facing ?? 0;
         m.waypointIndex = pickNextIndex(m.waypoints.length, m.waypointIndex);
         m.waitUntil =
           now + (target.sit ? 3500 + Math.random() * 4500 : 2000 + Math.random() * 2500);
@@ -798,6 +804,7 @@ export default function OfficeScene3D() {
   const [selectedDept, setSelectedDept] = useState<OfficeDeptKey | null>(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showEditorial, setShowEditorial] = useState(false);
 
   const cmoPos = useRef({ x: CMO_DESK[0], z: CMO_DESK[2] });
   const cfoPos = useRef({ x: CFO_DESK[0], z: CFO_DESK[2] });
@@ -845,6 +852,9 @@ export default function OfficeScene3D() {
       <div className="office-toolbar">
         <button type="button" className="secondary" onClick={() => setShowSettings(true)}>
           ⚙ 名前を編集
+        </button>
+        <button type="button" className="secondary" onClick={() => setShowEditorial(true)}>
+          📝 note記事の編集方針
         </button>
       </div>
 
@@ -923,6 +933,12 @@ export default function OfficeScene3D() {
       )}
       {showSettings && (
         <NameSettings names={status.names} onClose={() => setShowSettings(false)} />
+      )}
+      {showEditorial && (
+        <EditorialSettings
+          guidelines={status.editorialGuidelines}
+          onClose={() => setShowEditorial(false)}
+        />
       )}
     </div>
   );

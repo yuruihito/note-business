@@ -9,6 +9,7 @@ import {
   checkPassword,
 } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
+import { EDITORIAL_GUIDELINES_KEY } from "@/lib/data";
 
 export type FormState = { error?: string } | undefined;
 
@@ -95,6 +96,28 @@ export async function updateOfficeNames(
     );
     if (error) return { error: `保存に失敗しました: ${error.message}` };
   }
+
+  revalidatePath("/office");
+  return { ok: true };
+}
+
+export async function updateEditorialGuidelines(
+  _prevState: OfficeRequestState,
+  formData: FormData
+): Promise<OfficeRequestState> {
+  if (!(await hasValidSession())) redirect("/login");
+
+  const value = String(formData.get("guidelines") ?? "").trim();
+  if (!value) {
+    return { error: "内容を入力してください" };
+  }
+
+  const supabase = getSupabase();
+  const { error } = await supabase.from("settings").upsert(
+    { key: EDITORIAL_GUIDELINES_KEY, value, updated_at: new Date().toISOString() },
+    { onConflict: "key" }
+  );
+  if (error) return { error: `保存に失敗しました: ${error.message}` };
 
   revalidatePath("/office");
   return { ok: true };

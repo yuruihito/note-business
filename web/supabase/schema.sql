@@ -78,3 +78,25 @@ alter table activity_log enable row level security;
 
 create policy "anon can read activity_log" on activity_log for select using (true);
 create policy "anon can insert activity_log" on activity_log for insert with check (true);
+
+-- Free-form key/value settings, editable from the office page. Used first for
+-- the editorial guidelines that content-writing sub-agents must follow.
+create table if not exists settings (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table settings enable row level security;
+
+create policy "anon can read settings" on settings for select using (true);
+create policy "anon can insert settings" on settings for insert with check (true);
+create policy "anon can update settings" on settings for update using (true);
+
+insert into settings (key, value) values (
+  'editorial_guidelines',
+  '1. 無料部分は「読者を強く惹きつける導入」にする。要約で終わらせず、続きが気になる具体的な書き出し・数字・実例を冒頭に置く。
+2. テーマ選定は「ネット上にまとまった情報が少ない/検索しても断片的にしか出てこない」ものを優先する。すでに他の記事で書き尽くされているテーマは避ける。
+3. 有料部分には「他では読めない実務的な価値」を厚く含める。手順・テンプレート・実例・具体的な数値など。無料部分の続きを薄く引き伸ばすだけの水増しは禁止。
+4. 内容に関連する画像を、無料・有料それぞれに最低1枚程度入れる。出典・ライセンスが明確なもの(Unsplash/Pexels/Wikimedia Commons等の再配布可能な画像)に限る。'
+) on conflict (key) do nothing;

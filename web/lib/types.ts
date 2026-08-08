@@ -40,3 +40,9 @@ export type ActivityLogEntry = {
   request_id: string | null;
   created_at: string;
 };
+
+export type Setting = {
+  key: string;
+  value: string;
+  updated_at: string;
+};

@@ -28,6 +28,8 @@ const SECRETARY_DESK: Vec3 = [0, 0, 2.5];
 const CFO_DESK: Vec3 = [5, 0, 2.5];
 const MEETING: Vec3 = [0, 0, -2];
 const CEO_SPAWN: Vec3 = [0, 0, 1];
+// A larger executive desk near the window, distinct from the staff row.
+const CEO_DESK: Vec3 = [3.6, 0, -3.4];
 
 const DESKS: Record<OfficeDeptKey, Vec3> = {
   cmo: CMO_DESK,
@@ -59,6 +61,7 @@ const OBSTACLES: { x: number; z: number; r: number }[] = [
   { x: CMO_DESK[0], z: CMO_DESK[2], r: 0.78 },
   { x: SECRETARY_DESK[0], z: SECRETARY_DESK[2], r: 0.78 },
   { x: CFO_DESK[0], z: CFO_DESK[2], r: 0.78 },
+  { x: CEO_DESK[0], z: CEO_DESK[2], r: 1.2 },
   { x: -7.2, z: -4.2, r: 1.0 }, // bookshelf
   { x: 0, z: -2, r: 1.05 }, // meeting table
   { x: 0, z: 4.9, r: 1.35 }, // sofa
@@ -211,6 +214,63 @@ function Desk({ position, color }: { position: Vec3; color: string }) {
   );
 }
 
+// A bigger, two-monitor executive desk with a couple of document stacks —
+// visually distinct from the staff row so it reads as "the CEO's desk".
+function CeoDesk({ position }: { position: Vec3 }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.42, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.2, 0.09, 0.95]} />
+        <meshStandardMaterial color="#6b4226" />
+      </mesh>
+      <mesh position={[-0.95, 0.2, -0.35]} castShadow>
+        <boxGeometry args={[0.08, 0.4, 0.08]} />
+        <meshStandardMaterial color="#4a2e18" />
+      </mesh>
+      <mesh position={[0.95, 0.2, -0.35]} castShadow>
+        <boxGeometry args={[0.08, 0.4, 0.08]} />
+        <meshStandardMaterial color="#4a2e18" />
+      </mesh>
+      <mesh position={[-0.95, 0.2, 0.35]} castShadow>
+        <boxGeometry args={[0.08, 0.4, 0.08]} />
+        <meshStandardMaterial color="#4a2e18" />
+      </mesh>
+      <mesh position={[0.95, 0.2, 0.35]} castShadow>
+        <boxGeometry args={[0.08, 0.4, 0.08]} />
+        <meshStandardMaterial color="#4a2e18" />
+      </mesh>
+
+      {/* Two monitors, near/+z side like the staff desks */}
+      {[-0.42, 0.42].map((x) => (
+        <group key={x} position={[x, 0, 0.3]}>
+          <mesh position={[0, 0.68, 0]} castShadow>
+            <boxGeometry args={[0.42, 0.28, 0.03]} />
+            <meshStandardMaterial color="#1f2937" />
+          </mesh>
+          <mesh position={[0, 0.68, 0.017]}>
+            <boxGeometry args={[0.37, 0.22, 0.01]} />
+            <meshStandardMaterial color="#a78bfa" emissive="#a78bfa" emissiveIntensity={0.4} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Document stacks + a pen holder on the far/-z side */}
+      <mesh position={[-0.75, 0.475, -0.25]} rotation={[0, 0.3, 0]} castShadow>
+        <boxGeometry args={[0.28, 0.05, 0.36]} />
+        <meshStandardMaterial color="#f5f0e6" />
+      </mesh>
+      <mesh position={[-0.7, 0.52, -0.28]} rotation={[0, -0.15, 0]} castShadow>
+        <boxGeometry args={[0.26, 0.04, 0.34]} />
+        <meshStandardMaterial color="#eef2ff" />
+      </mesh>
+      <mesh position={[0.85, 0.5, -0.3]} castShadow>
+        <cylinderGeometry args={[0.045, 0.045, 0.16, 10]} />
+        <meshStandardMaterial color="#374151" />
+      </mesh>
+    </group>
+  );
+}
+
 function Plant({ position }: { position: Vec3 }) {
   return (
     <group position={position}>
@@ -344,6 +404,7 @@ function Room() {
       <Desk position={CMO_DESK} color={PERSONALITIES.cmo.color} />
       <Desk position={CFO_DESK} color={PERSONALITIES.cfo.color} />
       <Desk position={SECRETARY_DESK} color={PERSONALITIES.secretary.color} />
+      <CeoDesk position={CEO_DESK} />
       <Bookshelf position={[-7.2, 0, -4.2]} />
       <Plant position={[7, 0, -4.2]} />
       <Plant position={[-7, 0, 4.4]} />

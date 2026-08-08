@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -32,12 +32,63 @@ const DESKS: Record<OfficeDeptKey, Vec3> = {
   secretary: SECRETARY_DESK,
 };
 
-// Distinct hairstyles so each member is recognizable at a glance, not just by color.
-const LOOKS: Record<OfficeDeptKey, { hair: HairStyle; glasses?: boolean }> = {
-  cmo: { hair: "ponytail" },
-  cfo: { hair: "short", glasses: true },
-  secretary: { hair: "bun" },
+// Distinct hairstyles + coloring + expression so each member reads as a
+// different person at a glance, not just by body color.
+const LOOKS: Record<
+  OfficeDeptKey,
+  {
+    hair: HairStyle;
+    glasses?: boolean;
+    hairColor: string;
+    eyebrow: EyebrowStyle;
+    accent?: string;
+  }
+> = {
+  cmo: { hair: "ponytail", hairColor: "#5a3a22", eyebrow: "up" },
+  cfo: { hair: "short", glasses: true, hairColor: "#2f2f38", eyebrow: "straight" },
+  secretary: { hair: "bun", hairColor: "#6b4423", eyebrow: "soft", accent: "#f472b6" },
 };
+
+// Static furniture footprints the CEO avatar can't walk through, expressed as
+// circles so collision resolution stays cheap. Radii are generous approximations
+// of the actual box/cylinder geometry below.
+const OBSTACLES: { x: number; z: number; r: number }[] = [
+  { x: CMO_DESK[0], z: CMO_DESK[2], r: 0.78 },
+  { x: SECRETARY_DESK[0], z: SECRETARY_DESK[2], r: 0.78 },
+  { x: CFO_DESK[0], z: CFO_DESK[2], r: 0.78 },
+  { x: -7.2, z: -4.2, r: 1.0 }, // bookshelf
+  { x: 0, z: -2, r: 1.05 }, // meeting table
+  { x: 0, z: 4.9, r: 1.35 }, // sofa
+  { x: 0, z: 3.7, r: 0.65 }, // low table
+  { x: 7, z: -4.2, r: 0.4 },
+  { x: -7, z: 4.4, r: 0.4 },
+  { x: 7, z: 4.4, r: 0.4 },
+  { x: 6.8, z: -3.6, r: 0.4 },
+];
+const CHAR_RADIUS = 0.32;
+
+function resolveCollisions(x: number, z: number): { x: number; z: number } {
+  let nx = x;
+  let nz = z;
+  for (const o of OBSTACLES) {
+    const dx = nx - o.x;
+    const dz = nz - o.z;
+    const dist = Math.hypot(dx, dz);
+    const minDist = o.r + CHAR_RADIUS;
+    if (dist < minDist && dist > 0.0001) {
+      const push = minDist - dist;
+      nx += (dx / dist) * push;
+      nz += (dz / dist) * push;
+    }
+  }
+  return { x: nx, z: nz };
+}
+
+function shortestAngleLerp(current: number, target: number, t: number) {
+  let diff = target - current;
+  diff = ((diff + Math.PI) % (Math.PI * 2)) - Math.PI;
+  return current + diff * Math.min(1, t);
+}
 
 // Each department gets its own exclusive zone for idle wandering so
 // characters never cross paths or stack on top of one another.
@@ -109,6 +160,7 @@ type MoveState = {
   waitUntil: number;
   mode: string;
   sitting: boolean;
+  facing: number;
 };
 
 function useKeyState() {
@@ -291,23 +343,85 @@ function Room() {
       <Plant position={[-7, 0, 4.4]} />
       <Plant position={[7, 0, 4.4]} />
       <Plant position={[6.8, 0, -3.6]} />
+      <HangingScroll position={[6.2, 1.9, -4.9]} />
+    </group>
+  );
+}
+
+// A "一日十業" hanging scroll for the back wall. CJK glyphs aren't reliable
+// with drei's <Text> without bundling a font, so the characters are drawn to
+// a canvas and used as a texture instead.
+function HangingScroll({ position }: { position: Vec3 }) {
+  const texture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#f5ead1";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "#8b5e3c";
+    ctx.lineWidth = 10;
+    ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
+    ctx.fillStyle = "#2b2b2b";
+    ctx.font = "bold 84px serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const chars = Array.from("一日十業");
+    const startY = canvas.height * 0.22;
+    const gap = (canvas.height * 0.58) / (chars.length - 1);
+    chars.forEach((ch, i) => ctx.fillText(ch, canvas.width / 2, startY + i * gap));
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }, []);
+
+  if (!texture) return null;
+
+  return (
+    <group position={position}>
+      <mesh castShadow>
+        <planeGeometry args={[0.6, 1.3]} />
+        <meshStandardMaterial map={texture} />
+      </mesh>
+      <mesh position={[0, 0.68, 0.01]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.04, 0.04, 0.7, 12]} />
+        <meshStandardMaterial color="#5b3a24" />
+      </mesh>
+      <mesh position={[0, -0.68, 0.01]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.04, 0.04, 0.7, 12]} />
+        <meshStandardMaterial color="#5b3a24" />
+      </mesh>
     </group>
   );
 }
 
 type HairStyle = "none" | "ponytail" | "short" | "bun";
+type EyebrowStyle = "up" | "straight" | "soft";
+const EYEBROW_PRESETS: Record<EyebrowStyle, { y: number; tilt: number }> = {
+  up: { y: 1.278, tilt: 0.4 },
+  straight: { y: 1.255, tilt: 0 },
+  soft: { y: 1.265, tilt: 0.16 },
+};
 
 function Avatar({
   color,
   crown,
   hair = "none",
   glasses = false,
+  hairColor = "#3d2b1f",
+  eyebrow = "soft",
+  accent,
 }: {
   color: string;
   crown?: boolean;
   hair?: HairStyle;
   glasses?: boolean;
+  hairColor?: string;
+  eyebrow?: EyebrowStyle;
+  accent?: string;
 }) {
+  const brow = EYEBROW_PRESETS[eyebrow];
   return (
     <group>
       {/* Body (kept small relative to head for a chibi look) */}
@@ -337,6 +451,15 @@ function Avatar({
         <sphereGeometry args={[0.014, 6, 6]} />
         <meshStandardMaterial color="#ffffff" />
       </mesh>
+      {/* Eyebrows (shape/tilt varies per role, giving each a distinct expression) */}
+      <mesh position={[-0.12, brow.y, 0.3]} rotation={[0, 0, brow.tilt]}>
+        <boxGeometry args={[0.09, 0.018, 0.02]} />
+        <meshStandardMaterial color={hairColor} />
+      </mesh>
+      <mesh position={[0.12, brow.y, 0.3]} rotation={[0, 0, -brow.tilt]}>
+        <boxGeometry args={[0.09, 0.018, 0.02]} />
+        <meshStandardMaterial color={hairColor} />
+      </mesh>
       {/* Blush */}
       <mesh position={[-0.2, 1.1, 0.26]}>
         <sphereGeometry args={[0.05, 8, 8]} />
@@ -355,20 +478,28 @@ function Avatar({
       {(hair === "short" || hair === "ponytail" || hair === "bun") && (
         <mesh position={[0, 1.33, -0.02]} castShadow>
           <sphereGeometry args={[0.345, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
-          <meshStandardMaterial color="#3d2b1f" />
+          <meshStandardMaterial color={hairColor} />
         </mesh>
       )}
       {hair === "ponytail" && (
         <mesh position={[0, 1.12, -0.33]} rotation={[0.7, 0, 0]} castShadow>
           <capsuleGeometry args={[0.06, 0.26, 4, 8]} />
-          <meshStandardMaterial color="#3d2b1f" />
+          <meshStandardMaterial color={hairColor} />
         </mesh>
       )}
       {hair === "bun" && (
-        <mesh position={[0, 1.52, -0.12]} castShadow>
-          <sphereGeometry args={[0.11, 10, 10]} />
-          <meshStandardMaterial color="#3d2b1f" />
-        </mesh>
+        <>
+          <mesh position={[0, 1.52, -0.12]} castShadow>
+            <sphereGeometry args={[0.11, 10, 10]} />
+            <meshStandardMaterial color={hairColor} />
+          </mesh>
+          {accent && (
+            <mesh position={[0.09, 1.52, -0.19]}>
+              <sphereGeometry args={[0.035, 8, 8]} />
+              <meshStandardMaterial color={accent} />
+            </mesh>
+          )}
+        </>
       )}
       {glasses && (
         <>
@@ -419,6 +550,7 @@ function NpcCharacter({
     waitUntil: 0,
     mode: status.status,
     sitting: true,
+    facing: Math.PI, // starts seated, facing the desk/monitor
   });
   const bobSeed = useRef(0);
   const [bubbleText, setBubbleText] = useState(status.message);
@@ -472,6 +604,9 @@ function NpcCharacter({
       const dist = Math.hypot(dx, dz);
       if (dist < 0.08) {
         m.sitting = !!target.sit;
+        // Seated spots (desk chairs, sofa) are all arranged so "face into
+        // the room" reads correctly, e.g. toward the monitor at a desk.
+        if (target.sit) m.facing = Math.PI;
         m.waypointIndex = pickNextIndex(m.waypoints.length, m.waypointIndex);
         m.waitUntil =
           now + (target.sit ? 3500 + Math.random() * 4500 : 2000 + Math.random() * 2500);
@@ -480,6 +615,7 @@ function NpcCharacter({
         const step = Math.min(MOVE_SPEED * delta, dist);
         m.x += (dx / dist) * step;
         m.z += (dz / dist) * step;
+        m.facing = Math.atan2(dx, dz);
       }
     }
 
@@ -488,7 +624,14 @@ function NpcCharacter({
 
     const bob = Math.sin(state.clock.elapsedTime * 3 + bobSeed.current) * 0.03;
     const sitOffset = m.sitting ? -0.22 : 0;
-    groupRef.current?.position.set(m.x, bob + sitOffset, m.z);
+    if (groupRef.current) {
+      groupRef.current.position.set(m.x, bob + sitOffset, m.z);
+      groupRef.current.rotation.y = shortestAngleLerp(
+        groupRef.current.rotation.y,
+        m.facing,
+        delta * 6
+      );
+    }
   });
 
   return (
@@ -497,6 +640,9 @@ function NpcCharacter({
         color={PERSONALITIES[dept].color}
         hair={LOOKS[dept].hair}
         glasses={LOOKS[dept].glasses}
+        hairColor={LOOKS[dept].hairColor}
+        eyebrow={LOOKS[dept].eyebrow}
+        accent={LOOKS[dept].accent}
       />
       <mesh
         position={[0, 0.9, 0]}
@@ -542,6 +688,7 @@ function CeoCharacter({
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const bobSeed = useRef(0);
+  const facingRef = useRef(Math.PI);
 
   useEffect(() => {
     bobSeed.current = Math.random() * 1000;
@@ -561,23 +708,34 @@ function CeoCharacter({
       const len = Math.hypot(dx, dz);
       dx = (dx / len) * MOVE_SPEED * delta;
       dz = (dz / len) * MOVE_SPEED * delta;
-      posRef.current.x = THREE.MathUtils.clamp(
+      const tentativeX = THREE.MathUtils.clamp(
         posRef.current.x + dx,
         ROOM_BOUNDS.minX,
         ROOM_BOUNDS.maxX
       );
-      posRef.current.z = THREE.MathUtils.clamp(
+      const tentativeZ = THREE.MathUtils.clamp(
         posRef.current.z + dz,
         ROOM_BOUNDS.minZ,
         ROOM_BOUNDS.maxZ
       );
+      const resolved = resolveCollisions(tentativeX, tentativeZ);
+      posRef.current.x = resolved.x;
+      posRef.current.z = resolved.z;
+      facingRef.current = Math.atan2(dx, dz);
       moving = true;
     }
 
     const bob = moving
       ? Math.abs(Math.sin(state.clock.elapsedTime * 8)) * 0.05
       : Math.sin(state.clock.elapsedTime * 2 + bobSeed.current) * 0.02;
-    groupRef.current?.position.set(posRef.current.x, bob, posRef.current.z);
+    if (groupRef.current) {
+      groupRef.current.position.set(posRef.current.x, bob, posRef.current.z);
+      groupRef.current.rotation.y = shortestAngleLerp(
+        groupRef.current.rotation.y,
+        facingRef.current,
+        delta * 8
+      );
+    }
   });
 
   return (

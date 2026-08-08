@@ -91,10 +91,28 @@ function RequestProgressBar({ status }: { status: RequestStatus }) {
 }
 
 function IdeaApprovalRow({ idea }: { idea: DraftIdeaSummary }) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <div className="hud-idea-row">
-      <div className="hud-idea-title">{idea.title}</div>
-      <p className="hud-idea-summary">{idea.summary}</p>
+      <button
+        type="button"
+        className="hud-idea-toggle"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div className="hud-idea-title">{idea.title}</div>
+        <p className="hud-idea-summary">{idea.summary}</p>
+        <span className="hud-idea-expand-hint">
+          {expanded ? "下書きを閉じる ▲" : "下書きを読む ▼"}
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="hud-idea-body">
+          {idea.body ? idea.body : "下書き本文はまだありません。"}
+        </div>
+      )}
+
       <div className="actions-row">
         <form action={decideIdea}>
           <input type="hidden" name="id" value={idea.id} />
@@ -111,7 +129,7 @@ function IdeaApprovalRow({ idea }: { idea: DraftIdeaSummary }) {
           </button>
         </form>
         <Link href={`/ideas/${idea.id}`} className="hud-idea-link">
-          詳細
+          専用ページで開く
         </Link>
       </div>
     </div>

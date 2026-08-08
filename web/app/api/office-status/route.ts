@@ -18,6 +18,7 @@ export type DraftIdeaSummary = {
   id: string;
   title: string;
   summary: string;
+  body: string | null;
 };
 
 export type OfficeStatusResponse = {
@@ -96,7 +97,12 @@ export async function GET() {
   const allDraftIdeas = ideas.filter((i) => i.status === "draft");
   const draftIdeas: DraftIdeaSummary[] = allDraftIdeas
     .slice(0, 5)
-    .map((i) => ({ id: i.id, title: i.title, summary: truncate(i.summary, 60) }));
+    .map((i) => ({
+      id: i.id,
+      title: i.title,
+      summary: truncate(i.summary, 60),
+      body: i.body,
+    }));
 
   const backlogCount = pendingRequests.length + allDraftIdeas.length;
   const latestSecretaryActivity = recentActivity.find((a) => a.actor === "secretary");

@@ -77,17 +77,17 @@ const DEFAULT_STATUS: OfficeStatusResponse = {
   recentActivity: [],
 };
 
+function deskChairSpot(desk: Vec3): Vec3 {
+  // The desk's monitor faces +z, so the chair sits just outside the desk's
+  // footprint on that side instead of on top of the desk itself.
+  return [desk[0], 0, desk[2] + 0.55];
+}
+
 function desiredWaypoints(status: DeptStatus, dept: OfficeDeptKey): Waypoint[] {
   if (status.status === "working") {
-    const desk = DESKS[dept];
-    // Mostly seated at the desk, with an occasional stretch nearby —
-    // repeating the sitting entry weights the random pick toward it.
-    return [
-      { pos: desk, sit: true },
-      { pos: desk, sit: true },
-      { pos: desk, sit: true },
-      { pos: [desk[0], 0, desk[2] + 0.45], sit: false },
-    ];
+    // A single seated spot: no waypoint switching while working, so there's
+    // no jitter — just the idle bob animation for a sense of life.
+    return [{ pos: deskChairSpot(DESKS[dept]), sit: true }];
   }
   return IDLE_POOLS[dept];
 }
@@ -409,11 +409,11 @@ function NpcCharacter({
   posRef: React.MutableRefObject<{ x: number; z: number }>;
   onSelect: () => void;
 }) {
-  const initialDesk = DESKS[dept];
+  const initialSpot = deskChairSpot(DESKS[dept]);
   const groupRef = useRef<THREE.Group>(null);
   const moveRef = useRef<MoveState>({
-    x: initialDesk[0],
-    z: initialDesk[2],
+    x: initialSpot[0],
+    z: initialSpot[2],
     waypoints: desiredWaypoints(status, dept),
     waypointIndex: 0,
     waitUntil: 0,

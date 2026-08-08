@@ -5,11 +5,13 @@ import type { DeptStatus } from "../api/office-status/route";
 
 export default function DetailPanel({
   name,
+  role,
   trait,
   status,
   onClose,
 }: {
   name: string;
+  role: string;
   trait: string;
   status: DeptStatus;
   onClose: () => void;
@@ -19,7 +21,9 @@ export default function DetailPanel({
       <div className="office-panel-header">
         <div>
           <div className="card-title">{name}</div>
-          <div className="card-meta">{trait}</div>
+          <div className="card-meta">
+            {role} ・ {trait}
+          </div>
         </div>
         <button type="button" className="secondary" onClick={onClose}>
           閉じる

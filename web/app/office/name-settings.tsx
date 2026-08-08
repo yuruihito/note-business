@@ -2,12 +2,13 @@
 
 import { useActionState, useEffect } from "react";
 import { updateOfficeNames } from "../actions";
+import { ROLE_LABELS } from "@/lib/office-flavor";
 
 export default function NameSettings({
   names,
   onClose,
 }: {
-  names: { cmo: string; cfo: string; ceo: string };
+  names: { cmo: string; cfo: string; ceo: string; secretary: string };
   onClose: () => void;
 }) {
   const [state, formAction, pending] = useActionState(
@@ -26,7 +27,9 @@ export default function NameSettings({
         <form action={formAction}>
           {state?.error && <p className="error-text">{state.error}</p>}
           <div className="field">
-            <label htmlFor="office-name-ceo">社長(あなた)</label>
+            <label htmlFor="office-name-ceo">
+              {ROLE_LABELS.ceo}(あなた)の名前
+            </label>
             <input
               id="office-name-ceo"
               name="ceo"
@@ -36,7 +39,7 @@ export default function NameSettings({
             />
           </div>
           <div className="field">
-            <label htmlFor="office-name-cmo">CMO</label>
+            <label htmlFor="office-name-cmo">{ROLE_LABELS.cmo}の名前</label>
             <input
               id="office-name-cmo"
               name="cmo"
@@ -46,12 +49,24 @@ export default function NameSettings({
             />
           </div>
           <div className="field">
-            <label htmlFor="office-name-cfo">CFO</label>
+            <label htmlFor="office-name-cfo">{ROLE_LABELS.cfo}の名前</label>
             <input
               id="office-name-cfo"
               name="cfo"
               type="text"
               defaultValue={names.cfo}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="office-name-secretary">
+              {ROLE_LABELS.secretary}の名前
+            </label>
+            <input
+              id="office-name-secretary"
+              name="secretary"
+              type="text"
+              defaultValue={names.secretary}
               required
             />
           </div>

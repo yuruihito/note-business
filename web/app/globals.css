@@ -348,6 +348,12 @@ button:disabled {
   white-space: nowrap;
 }
 
+.office-role-label {
+  font-size: 0.58rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 .office-status-pill {
   flex-shrink: 0;
   padding: 0.05rem 0.4rem;
@@ -474,6 +480,15 @@ button:disabled {
   -webkit-backdrop-filter: blur(8px);
   max-height: 720px;
   overflow-y: auto;
+}
+
+.hud-suggestion {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 0.8rem;
+  line-height: 1.5;
 }
 
 .hud-heading {

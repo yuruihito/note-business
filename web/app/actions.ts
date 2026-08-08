@@ -83,7 +83,7 @@ export async function updateOfficeNames(
   if (!(await hasValidSession())) redirect("/login");
 
   const supabase = getSupabase();
-  const depts = ["cmo", "cfo", "ceo"] as const;
+  const depts = ["cmo", "cfo", "ceo", "secretary"] as const;
 
   for (const dept of depts) {
     const name = String(formData.get(dept) ?? "").trim();

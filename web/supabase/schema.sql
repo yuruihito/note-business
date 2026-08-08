@@ -39,9 +39,9 @@ create policy "anon can read content_ideas" on content_ideas for select using (t
 create policy "anon can insert content_ideas" on content_ideas for insert with check (true);
 create policy "anon can update content_ideas" on content_ideas for update using (true);
 
--- Display names for the virtual office avatars (CMO / CFO / CEO).
+-- Display names for the virtual office avatars (CMO / CFO / CEO / secretary).
 create table if not exists office_profiles (
-  dept text primary key check (dept in ('cmo', 'cfo', 'ceo')),
+  dept text primary key check (dept in ('cmo', 'cfo', 'ceo', 'secretary')),
   display_name text not null,
   updated_at timestamptz not null default now()
 );
@@ -53,5 +53,13 @@ create policy "anon can insert office_profiles" on office_profiles for insert wi
 create policy "anon can update office_profiles" on office_profiles for update using (true);
 
 insert into office_profiles (dept, display_name) values
-  ('cmo', 'CMO'), ('cfo', 'CFO'), ('ceo', '社長')
+  ('cmo', 'CMO'), ('cfo', 'CFO'), ('ceo', '社長'), ('secretary', '秘書')
+on conflict (dept) do nothing;
+
+-- Migration: run this block if office_profiles already exists from an earlier
+-- version of this schema (adds the 'secretary' dept).
+alter table office_profiles drop constraint if exists office_profiles_dept_check;
+alter table office_profiles add constraint office_profiles_dept_check
+  check (dept in ('cmo', 'cfo', 'ceo', 'secretary'));
+insert into office_profiles (dept, display_name) values ('secretary', '秘書')
 on conflict (dept) do nothing;

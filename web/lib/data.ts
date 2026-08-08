@@ -37,6 +37,7 @@ const DEFAULT_OFFICE_NAMES: Record<OfficeDept, string> = {
   cmo: "CMO",
   cfo: "CFO",
   ceo: "社長",
+  secretary: "秘書",
 };
 
 export async function getOfficeNames(): Promise<Record<OfficeDept, string>> {

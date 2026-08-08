@@ -23,12 +23,16 @@ export type DraftIdeaSummary = {
 export type OfficeStatusResponse = {
   cmo: DeptStatus;
   cfo: DeptStatus;
-  names: { cmo: string; cfo: string; ceo: string };
+  secretary: DeptStatus;
+  names: { cmo: string; cfo: string; ceo: string; secretary: string };
   activeRequest: ActiveRequestSummary | null;
   draftIdeas: DraftIdeaSummary[];
+  pendingRequestCount: number;
+  suggestHiring: boolean;
 };
 
 const RECENT_MS = 24 * 60 * 60 * 1000; // consider content "fresh" for 24h
+const HIRING_SUGGESTION_THRESHOLD = 3;
 
 function truncate(text: string, max = 42) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
@@ -45,9 +49,10 @@ export async function GET() {
     getOfficeNames(),
   ]);
 
-  const activeRequest = requests.find(
+  const pendingRequests = requests.filter(
     (r) => r.status === "queued" || r.status === "in_progress"
   );
+  const activeRequest = pendingRequests[0];
 
   let cmo: DeptStatus;
   if (activeRequest) {
@@ -80,19 +85,32 @@ export async function GET() {
     link: null,
   };
 
-  const draftIdeas: DraftIdeaSummary[] = ideas
-    .filter((i) => i.status === "draft")
+  const allDraftIdeas = ideas.filter((i) => i.status === "draft");
+  const draftIdeas: DraftIdeaSummary[] = allDraftIdeas
     .slice(0, 5)
     .map((i) => ({ id: i.id, title: i.title, summary: truncate(i.summary, 60) }));
+
+  const backlogCount = pendingRequests.length + allDraftIdeas.length;
+  const secretary: DeptStatus =
+    backlogCount > 0
+      ? {
+          status: "working",
+          message: `未対応の依頼・企画あわせて${backlogCount}件をサポート中`,
+          link: null,
+        }
+      : { status: "idle", message: "今は落ち着いています", link: null };
 
   const response: OfficeStatusResponse = {
     cmo,
     cfo,
+    secretary,
     names,
     activeRequest: activeRequest
       ? { id: activeRequest.id, text: activeRequest.text, status: activeRequest.status }
       : null,
     draftIdeas,
+    pendingRequestCount: pendingRequests.length,
+    suggestHiring: pendingRequests.length >= HIRING_SUGGESTION_THRESHOLD,
   };
   return Response.json(response);
 }

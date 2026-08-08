@@ -23,7 +23,7 @@ export type ContentIdea = {
   updated_at: string;
 };
 
-export type OfficeDept = "cmo" | "cfo" | "ceo";
+export type OfficeDept = "cmo" | "cfo" | "ceo" | "secretary";
 
 export type OfficeProfile = {
   dept: OfficeDept;

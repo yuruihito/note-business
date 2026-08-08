@@ -5,20 +5,39 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { OfficeStatusResponse, DeptStatus } from "../api/office-status/route";
-import { PERSONALITIES, pickIdleLine, type OfficeDeptKey } from "@/lib/office-flavor";
+import {
+  PERSONALITIES,
+  ROLE_LABELS,
+  pickIdleLine,
+  type OfficeDeptKey,
+} from "@/lib/office-flavor";
 import RequestModal from "./request-modal";
 import DetailPanel from "./detail-panel";
 import NameSettings from "./name-settings";
 import HudPanel from "./hud-panel";
 
 type Vec3 = [number, number, number];
+type Waypoint = { pos: Vec3; sit?: boolean };
 
 const CMO_DESK: Vec3 = [-5, 0, 2.5];
 const CFO_DESK: Vec3 = [5, 0, 2.5];
+const SECRETARY_DESK: Vec3 = [-6.3, 0, 3.6];
 const MEETING: Vec3 = [0, 0, -2];
 const CMO_BREAK: Vec3 = [-1.4, 0, 4.2];
 const CFO_BREAK: Vec3 = [1.4, 0, 4.2];
+const SECRETARY_BREAK: Vec3 = [-6.2, 0, -3];
 const CEO_SPAWN: Vec3 = [0, 0, 1];
+
+const DESKS: Record<OfficeDeptKey, Vec3> = {
+  cmo: CMO_DESK,
+  cfo: CFO_DESK,
+  secretary: SECRETARY_DESK,
+};
+const BREAKS: Record<OfficeDeptKey, Vec3> = {
+  cmo: CMO_BREAK,
+  cfo: CFO_BREAK,
+  secretary: SECRETARY_BREAK,
+};
 
 const INTERACT_DISTANCE = 2.2;
 const MOVE_SPEED = 2.6; // world units / second
@@ -27,28 +46,42 @@ const ROOM_BOUNDS = { minX: -7.4, maxX: 7.4, minZ: -4.4, maxZ: 4.4 };
 const DEFAULT_STATUS: OfficeStatusResponse = {
   cmo: { status: "idle", message: "読み込み中...", link: null },
   cfo: { status: "idle", message: "読み込み中...", link: null },
-  names: { cmo: "CMO", cfo: "CFO", ceo: "社長" },
+  secretary: { status: "idle", message: "読み込み中...", link: null },
+  names: { cmo: "CMO", cfo: "CFO", ceo: "社長", secretary: "秘書" },
   activeRequest: null,
   draftIdeas: [],
+  pendingRequestCount: 0,
+  suggestHiring: false,
 };
 
-function desiredWaypoints(status: DeptStatus, dept: OfficeDeptKey): Vec3[] {
+function desiredWaypoints(status: DeptStatus, dept: OfficeDeptKey): Waypoint[] {
   if (status.status === "working") {
-    const desk = dept === "cmo" ? CMO_DESK : CFO_DESK;
-    return [desk, MEETING, desk];
+    const desk = DESKS[dept];
+    return [
+      { pos: desk, sit: true },
+      { pos: MEETING, sit: false },
+      { pos: desk, sit: true },
+    ];
   }
-  const a = dept === "cmo" ? CMO_BREAK : CFO_BREAK;
-  const b: Vec3 = [a[0] + 0.6, 0, a[2] - 0.5];
-  return [a, b];
+  const base = BREAKS[dept];
+  const sofa: Vec3 = [base[0], 0, base[2]];
+  const wanderA: Vec3 = [base[0] + 0.9, 0, base[2] - 0.6];
+  const wanderB: Vec3 = [base[0] - 0.7, 0, base[2] + 0.5];
+  return [
+    { pos: sofa, sit: true },
+    { pos: wanderA, sit: false },
+    { pos: wanderB, sit: false },
+  ];
 }
 
 type MoveState = {
   x: number;
   z: number;
-  waypoints: Vec3[];
+  waypoints: Waypoint[];
   waypointIndex: number;
   waitUntil: number;
   mode: string;
+  sitting: boolean;
 };
 
 function useKeyState() {
@@ -142,6 +175,60 @@ function Room() {
         <meshStandardMaterial color="#e7ddc8" />
       </mesh>
 
+      {/* Back wall with wainscoting */}
+      <mesh position={[0, 1.5, -5]} receiveShadow>
+        <boxGeometry args={[16, 3, 0.15]} />
+        <meshStandardMaterial color="#f4efe4" />
+      </mesh>
+      <mesh position={[0, 0.45, -4.92]}>
+        <boxGeometry args={[16, 0.9, 0.03]} />
+        <meshStandardMaterial color="#c9a876" />
+      </mesh>
+
+      {/* Left wall */}
+      <mesh position={[-8, 1.5, 0]} receiveShadow>
+        <boxGeometry args={[0.15, 3, 10]} />
+        <meshStandardMaterial color="#f4efe4" />
+      </mesh>
+      <mesh position={[-7.92, 0.45, 0]}>
+        <boxGeometry args={[0.03, 0.9, 10]} />
+        <meshStandardMaterial color="#c9a876" />
+      </mesh>
+
+      {/* Window */}
+      <mesh position={[3.4, 1.9, -4.9]}>
+        <boxGeometry args={[2.6, 1.2, 0.05]} />
+        <meshStandardMaterial color="#bfe3ee" emissive="#bfe3ee" emissiveIntensity={0.35} />
+      </mesh>
+      <mesh position={[3.4, 1.9, -4.87]}>
+        <boxGeometry args={[0.06, 1.2, 0.02]} />
+        <meshStandardMaterial color="#8b7355" />
+      </mesh>
+      <mesh position={[3.4, 1.9, -4.87]}>
+        <boxGeometry args={[2.6, 0.06, 0.02]} />
+        <meshStandardMaterial color="#8b7355" />
+      </mesh>
+
+      {/* Whiteboard */}
+      <mesh position={[-2.6, 1.7, -4.9]}>
+        <boxGeometry args={[1.7, 1.05, 0.05]} />
+        <meshStandardMaterial color="#9ca3af" />
+      </mesh>
+      <mesh position={[-2.6, 1.7, -4.86]}>
+        <boxGeometry args={[1.55, 0.9, 0.02]} />
+        <meshStandardMaterial color="#ffffff" />
+      </mesh>
+
+      {/* Pendant lights */}
+      <mesh position={[-5, 2.85, 2.5]}>
+        <cylinderGeometry args={[0.25, 0.25, 0.08, 16]} />
+        <meshStandardMaterial color="#fef3c7" emissive="#fef3c7" emissiveIntensity={0.6} />
+      </mesh>
+      <mesh position={[5, 2.85, 2.5]}>
+        <cylinderGeometry args={[0.25, 0.25, 0.08, 16]} />
+        <meshStandardMaterial color="#fef3c7" emissive="#fef3c7" emissiveIntensity={0.6} />
+      </mesh>
+
       <mesh position={[0, 0.01, 4.2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[2.6, 24]} />
         <meshStandardMaterial color="#b9d8c9" />
@@ -171,10 +258,12 @@ function Room() {
 
       <Desk position={CMO_DESK} color={PERSONALITIES.cmo.color} />
       <Desk position={CFO_DESK} color={PERSONALITIES.cfo.color} />
+      <Desk position={SECRETARY_DESK} color={PERSONALITIES.secretary.color} />
       <Bookshelf position={[-7.2, 0, -4.2]} />
       <Plant position={[7, 0, -4.2]} />
       <Plant position={[-7, 0, 4.4]} />
       <Plant position={[7, 0, 4.4]} />
+      <Plant position={[6.8, 0, -3.6]} />
     </group>
   );
 }
@@ -188,29 +277,50 @@ function Avatar({
 }) {
   return (
     <group>
-      <mesh castShadow position={[0, 0.65, 0]}>
-        <capsuleGeometry args={[0.32, 0.5, 4, 10]} />
+      {/* Body (kept small relative to head for a chibi look) */}
+      <mesh castShadow position={[0, 0.5, 0]}>
+        <capsuleGeometry args={[0.26, 0.32, 4, 10]} />
         <meshStandardMaterial color={color} />
       </mesh>
-      <mesh castShadow position={[0, 1.28, 0]}>
-        <sphereGeometry args={[0.26, 16, 16]} />
-        <meshStandardMaterial color="#f3d9b1" />
+      {/* Head */}
+      <mesh castShadow position={[0, 1.15, 0]}>
+        <sphereGeometry args={[0.34, 20, 20]} />
+        <meshStandardMaterial color="#f8ddb8" />
       </mesh>
-      <mesh position={[-0.09, 1.32, 0.22]}>
-        <sphereGeometry args={[0.035, 8, 8]} />
+      {/* Eyes with a tiny sparkle highlight */}
+      <mesh position={[-0.12, 1.2, 0.29]}>
+        <sphereGeometry args={[0.045, 8, 8]} />
         <meshStandardMaterial color="#2b2b2b" />
       </mesh>
-      <mesh position={[0.09, 1.32, 0.22]}>
-        <sphereGeometry args={[0.035, 8, 8]} />
+      <mesh position={[0.12, 1.2, 0.29]}>
+        <sphereGeometry args={[0.045, 8, 8]} />
         <meshStandardMaterial color="#2b2b2b" />
       </mesh>
-      <mesh position={[0, 1.19, 0.24]} rotation={[0, 0, Math.PI / 2]}>
-        <capsuleGeometry args={[0.01, 0.09, 4, 6]} />
+      <mesh position={[-0.1, 1.23, 0.32]}>
+        <sphereGeometry args={[0.014, 6, 6]} />
+        <meshStandardMaterial color="#ffffff" />
+      </mesh>
+      <mesh position={[0.14, 1.23, 0.32]}>
+        <sphereGeometry args={[0.014, 6, 6]} />
+        <meshStandardMaterial color="#ffffff" />
+      </mesh>
+      {/* Blush */}
+      <mesh position={[-0.2, 1.1, 0.26]}>
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshStandardMaterial color="#f4a3b8" transparent opacity={0.55} />
+      </mesh>
+      <mesh position={[0.2, 1.1, 0.26]}>
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshStandardMaterial color="#f4a3b8" transparent opacity={0.55} />
+      </mesh>
+      {/* Mouth */}
+      <mesh position={[0, 1.05, 0.32]} rotation={[0, 0, Math.PI / 2]}>
+        <capsuleGeometry args={[0.012, 0.08, 4, 6]} />
         <meshStandardMaterial color="#b5654f" />
       </mesh>
       {crown && (
-        <mesh castShadow position={[0, 1.56, 0]}>
-          <coneGeometry args={[0.16, 0.22, 6]} />
+        <mesh castShadow position={[0, 1.48, 0]}>
+          <coneGeometry args={[0.17, 0.22, 6]} />
           <meshStandardMaterial color="#facc15" />
         </mesh>
       )}
@@ -231,7 +341,7 @@ function NpcCharacter({
   posRef: React.MutableRefObject<{ x: number; z: number }>;
   onSelect: () => void;
 }) {
-  const initialDesk = dept === "cmo" ? CMO_DESK : CFO_DESK;
+  const initialDesk = DESKS[dept];
   const groupRef = useRef<THREE.Group>(null);
   const moveRef = useRef<MoveState>({
     x: initialDesk[0],
@@ -240,6 +350,7 @@ function NpcCharacter({
     waypointIndex: 0,
     waitUntil: 0,
     mode: status.status,
+    sitting: true,
   });
   const bobSeed = useRef(0);
   const [bubbleText, setBubbleText] = useState(status.message);
@@ -288,13 +399,16 @@ function NpcCharacter({
 
     if (now >= m.waitUntil) {
       const target = m.waypoints[m.waypointIndex];
-      const dx = target[0] - m.x;
-      const dz = target[2] - m.z;
+      const dx = target.pos[0] - m.x;
+      const dz = target.pos[2] - m.z;
       const dist = Math.hypot(dx, dz);
       if (dist < 0.08) {
+        m.sitting = !!target.sit;
         m.waypointIndex = (m.waypointIndex + 1) % m.waypoints.length;
-        m.waitUntil = now + 2500 + Math.random() * 3500;
+        m.waitUntil =
+          now + (target.sit ? 3500 + Math.random() * 4500 : 2000 + Math.random() * 2500);
       } else {
+        m.sitting = false;
         const step = Math.min(MOVE_SPEED * delta, dist);
         m.x += (dx / dist) * step;
         m.z += (dz / dist) * step;
@@ -305,7 +419,8 @@ function NpcCharacter({
     posRef.current.z = m.z;
 
     const bob = Math.sin(state.clock.elapsedTime * 3 + bobSeed.current) * 0.03;
-    groupRef.current?.position.set(m.x, bob, m.z);
+    const sitOffset = m.sitting ? -0.22 : 0;
+    groupRef.current?.position.set(m.x, bob + sitOffset, m.z);
   });
 
   return (
@@ -329,7 +444,10 @@ function NpcCharacter({
       <Html position={[0, 1.9, 0]} center pointerEvents="none">
         <div className={`office-bubble ${bubbleKind}`}>
           <div className="office-bubble-head">
-            <strong>{name}</strong>
+            <div>
+              <strong>{name}</strong>
+              <div className="office-role-label">{ROLE_LABELS[dept]}</div>
+            </div>
             <span className={`office-status-pill ${status.status}`}>
               {status.status === "working" ? "作業中" : "休憩中"}
             </span>
@@ -396,7 +514,10 @@ function CeoCharacter({
       <Html position={[0, 1.9, 0]} center pointerEvents="none">
         <div className="office-bubble idle">
           <div className="office-bubble-head">
-            <strong>{name}</strong>
+            <div>
+              <strong>{name}</strong>
+              <div className="office-role-label">{ROLE_LABELS.ceo}</div>
+            </div>
           </div>
           <span className="office-bubble-msg">WASDで移動</span>
         </div>
@@ -450,6 +571,7 @@ export default function OfficeScene3D() {
 
   const cmoPos = useRef({ x: CMO_DESK[0], z: CMO_DESK[2] });
   const cfoPos = useRef({ x: CFO_DESK[0], z: CFO_DESK[2] });
+  const secretaryPos = useRef({ x: SECRETARY_DESK[0], z: SECRETARY_DESK[2] });
   const ceoPos = useRef({ x: CEO_SPAWN[0], z: CEO_SPAWN[2] });
   const keys = useKeyState();
 
@@ -520,6 +642,13 @@ export default function OfficeScene3D() {
             posRef={cfoPos}
             onSelect={() => setSelectedDept("cfo")}
           />
+          <NpcCharacter
+            dept="secretary"
+            name={status.names.secretary}
+            status={status.secretary}
+            posRef={secretaryPos}
+            onSelect={() => setSelectedDept("secretary")}
+          />
           <CeoCharacter name={status.names.ceo} posRef={ceoPos} keys={keys} />
           <SceneLoop
             cmoPos={cmoPos}
@@ -549,6 +678,7 @@ export default function OfficeScene3D() {
       {selectedDept && (
         <DetailPanel
           name={status.names[selectedDept]}
+          role={ROLE_LABELS[selectedDept]}
           trait={PERSONALITIES[selectedDept].trait}
           status={status[selectedDept]}
           onClose={() => setSelectedDept(null)}

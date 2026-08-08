@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { decideIdea } from "../actions";
 import OfficeRequestForm from "./request-form-fields";
-import { PERSONALITIES } from "@/lib/office-flavor";
+import { PERSONALITIES, ROLE_LABELS } from "@/lib/office-flavor";
 import type {
   DraftIdeaSummary,
   OfficeStatusResponse,
@@ -98,6 +98,7 @@ export default function HudPanel({ status }: { status: OfficeStatusResponse }) {
     {
       key: "ceo",
       label: status.names.ceo,
+      role: ROLE_LABELS.ceo,
       color: CEO_COLOR,
       working: false,
       statusLabel: "操作中",
@@ -106,6 +107,7 @@ export default function HudPanel({ status }: { status: OfficeStatusResponse }) {
     {
       key: "cmo",
       label: status.names.cmo,
+      role: ROLE_LABELS.cmo,
       color: PERSONALITIES.cmo.color,
       working: status.cmo.status === "working",
       statusLabel: status.cmo.status === "working" ? "作業中" : "休憩中",
@@ -114,15 +116,32 @@ export default function HudPanel({ status }: { status: OfficeStatusResponse }) {
     {
       key: "cfo",
       label: status.names.cfo,
+      role: ROLE_LABELS.cfo,
       color: PERSONALITIES.cfo.color,
       working: status.cfo.status === "working",
       statusLabel: status.cfo.status === "working" ? "作業中" : "休憩中",
       message: status.cfo.message,
     },
+    {
+      key: "secretary",
+      label: status.names.secretary,
+      role: ROLE_LABELS.secretary,
+      color: PERSONALITIES.secretary.color,
+      working: status.secretary.status === "working",
+      statusLabel: status.secretary.status === "working" ? "作業中" : "休憩中",
+      message: status.secretary.message,
+    },
   ];
 
   return (
     <aside className="hud-panel">
+      {status.suggestHiring && (
+        <div className="hud-suggestion">
+          未対応の依頼が{status.pendingRequestCount}件たまっています。人手が足りないかもしれません。
+          「秘書を増やして」のように話しかければ部門を増やせます。
+        </div>
+      )}
+
       <section>
         <h2 className="hud-heading">メンバー</h2>
         {roster.map((m) => (
@@ -130,7 +149,10 @@ export default function HudPanel({ status }: { status: OfficeStatusResponse }) {
             <FaceIcon color={m.color} />
             <div className="hud-member-info">
               <div className="office-bubble-head">
-                <strong>{m.label}</strong>
+                <div>
+                  <strong>{m.label}</strong>
+                  <div className="office-role-label">{m.role}</div>
+                </div>
                 <span
                   className={`office-status-pill ${m.working ? "working" : "idle"}`}
                 >

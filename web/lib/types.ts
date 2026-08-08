@@ -30,3 +30,13 @@ export type OfficeProfile = {
   display_name: string;
   updated_at: string;
 };
+
+export type ActivityActor = "orchestrator" | "cmo" | "cfo" | "secretary";
+
+export type ActivityLogEntry = {
+  id: string;
+  actor: ActivityActor;
+  message: string;
+  request_id: string | null;
+  created_at: string;
+};

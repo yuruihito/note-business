@@ -1,6 +1,12 @@
 import "server-only";
 import { getSupabase } from "./supabase";
-import type { CeoRequest, ContentIdea, OfficeDept, OfficeProfile } from "./types";
+import type {
+  ActivityLogEntry,
+  CeoRequest,
+  ContentIdea,
+  OfficeDept,
+  OfficeProfile,
+} from "./types";
 
 export async function listRequests(): Promise<CeoRequest[]> {
   const supabase = getSupabase();
@@ -31,6 +37,17 @@ export async function getIdea(id: string): Promise<ContentIdea | null> {
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function listActivityLog(limit = 12): Promise<ActivityLogEntry[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("activity_log")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 const DEFAULT_OFFICE_NAMES: Record<OfficeDept, string> = {

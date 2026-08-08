@@ -36,6 +36,7 @@
 |---|---|---|
 | `mkt:` | CMO（マーケ） | `.claude/agents/cmo.md`, `.claude/agents/content-engine.md` |
 | `fin:` | CFO（経理・財務） | `.claude/agents/cfo.md` |
+| `sec:` | 秘書（雑務・作業ログ記録） | `.claude/agents/secretary.md` |
 | `hr:` | 人事（AI社員の増減・管理） | `.claude/agents/hr.md` |
 
 以下は現在休止中（`.claude/agents/_disabled/`）。必要になれば「〇〇部門を増やして」とCEOから指示する。

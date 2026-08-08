@@ -63,3 +63,18 @@ alter table office_profiles add constraint office_profiles_dept_check
   check (dept in ('cmo', 'cfo', 'ceo', 'secretary'));
 insert into office_profiles (dept, display_name) values ('secretary', '秘書')
 on conflict (dept) do nothing;
+
+-- Timeline of what the AI actually did on each run (market research steps,
+-- drafting notes, etc.) so the CEO can see more than just "in_progress".
+create table if not exists activity_log (
+  id uuid primary key default gen_random_uuid(),
+  actor text not null check (actor in ('orchestrator', 'cmo', 'cfo', 'secretary')),
+  message text not null,
+  request_id uuid references requests(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+alter table activity_log enable row level security;
+
+create policy "anon can read activity_log" on activity_log for select using (true);
+create policy "anon can insert activity_log" on activity_log for insert with check (true);

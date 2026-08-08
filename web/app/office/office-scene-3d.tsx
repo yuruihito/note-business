@@ -19,13 +19,11 @@ import HudPanel from "./hud-panel";
 type Vec3 = [number, number, number];
 type Waypoint = { pos: Vec3; sit?: boolean };
 
+// Desks are arranged in one neat, evenly-spaced row.
 const CMO_DESK: Vec3 = [-5, 0, 2.5];
+const SECRETARY_DESK: Vec3 = [0, 0, 2.5];
 const CFO_DESK: Vec3 = [5, 0, 2.5];
-const SECRETARY_DESK: Vec3 = [-6.3, 0, 3.6];
 const MEETING: Vec3 = [0, 0, -2];
-const CMO_BREAK: Vec3 = [-1.4, 0, 4.2];
-const CFO_BREAK: Vec3 = [1.4, 0, 4.2];
-const SECRETARY_BREAK: Vec3 = [-6.2, 0, -3];
 const CEO_SPAWN: Vec3 = [0, 0, 1];
 
 const DESKS: Record<OfficeDeptKey, Vec3> = {
@@ -33,10 +31,34 @@ const DESKS: Record<OfficeDeptKey, Vec3> = {
   cfo: CFO_DESK,
   secretary: SECRETARY_DESK,
 };
-const BREAKS: Record<OfficeDeptKey, Vec3> = {
-  cmo: CMO_BREAK,
-  cfo: CFO_BREAK,
-  secretary: SECRETARY_BREAK,
+
+// Distinct hairstyles so each member is recognizable at a glance, not just by color.
+const LOOKS: Record<OfficeDeptKey, { hair: HairStyle; glasses?: boolean }> = {
+  cmo: { hair: "ponytail" },
+  cfo: { hair: "short", glasses: true },
+  secretary: { hair: "bun" },
+};
+
+// Each department gets its own exclusive zone for idle wandering so
+// characters never cross paths or stack on top of one another.
+const IDLE_POOLS: Record<OfficeDeptKey, Waypoint[]> = {
+  cmo: [
+    { pos: [-0.7, 0, 4.7], sit: true },
+    { pos: [-0.7, 0, 4.7], sit: true },
+    { pos: [-2.3, 0, 3.7], sit: false },
+    { pos: [-1.2, 0, 3.9], sit: false },
+  ],
+  cfo: [
+    { pos: [0.7, 0, 4.7], sit: true },
+    { pos: [0.7, 0, 4.7], sit: true },
+    { pos: [2.3, 0, 3.7], sit: false },
+    { pos: [1.2, 0, 3.9], sit: false },
+  ],
+  secretary: [
+    { pos: [-6.8, 0, -3.6], sit: false },
+    { pos: [-6.0, 0, -3.0], sit: false },
+    { pos: [-7.0, 0, -2.4], sit: false },
+  ],
 };
 
 const INTERACT_DISTANCE = 2.2;
@@ -52,26 +74,31 @@ const DEFAULT_STATUS: OfficeStatusResponse = {
   draftIdeas: [],
   pendingRequestCount: 0,
   suggestHiring: false,
+  recentActivity: [],
 };
 
 function desiredWaypoints(status: DeptStatus, dept: OfficeDeptKey): Waypoint[] {
   if (status.status === "working") {
     const desk = DESKS[dept];
+    // Mostly seated at the desk, with an occasional stretch nearby —
+    // repeating the sitting entry weights the random pick toward it.
     return [
       { pos: desk, sit: true },
-      { pos: MEETING, sit: false },
       { pos: desk, sit: true },
+      { pos: desk, sit: true },
+      { pos: [desk[0], 0, desk[2] + 0.45], sit: false },
     ];
   }
-  const base = BREAKS[dept];
-  const sofa: Vec3 = [base[0], 0, base[2]];
-  const wanderA: Vec3 = [base[0] + 0.9, 0, base[2] - 0.6];
-  const wanderB: Vec3 = [base[0] - 0.7, 0, base[2] + 0.5];
-  return [
-    { pos: sofa, sit: true },
-    { pos: wanderA, sit: false },
-    { pos: wanderB, sit: false },
-  ];
+  return IDLE_POOLS[dept];
+}
+
+function pickNextIndex(poolSize: number, currentIndex: number) {
+  if (poolSize <= 1) return 0;
+  let next = currentIndex;
+  while (next === currentIndex) {
+    next = Math.floor(Math.random() * poolSize);
+  }
+  return next;
 }
 
 type MoveState = {
@@ -268,12 +295,18 @@ function Room() {
   );
 }
 
+type HairStyle = "none" | "ponytail" | "short" | "bun";
+
 function Avatar({
   color,
   crown,
+  hair = "none",
+  glasses = false,
 }: {
   color: string;
   crown?: boolean;
+  hair?: HairStyle;
+  glasses?: boolean;
 }) {
   return (
     <group>
@@ -318,6 +351,41 @@ function Avatar({
         <capsuleGeometry args={[0.012, 0.08, 4, 6]} />
         <meshStandardMaterial color="#b5654f" />
       </mesh>
+      {/* Hair (shape varies per role so silhouettes read as distinct people) */}
+      {(hair === "short" || hair === "ponytail" || hair === "bun") && (
+        <mesh position={[0, 1.33, -0.02]} castShadow>
+          <sphereGeometry args={[0.345, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
+          <meshStandardMaterial color="#3d2b1f" />
+        </mesh>
+      )}
+      {hair === "ponytail" && (
+        <mesh position={[0, 1.12, -0.33]} rotation={[0.7, 0, 0]} castShadow>
+          <capsuleGeometry args={[0.06, 0.26, 4, 8]} />
+          <meshStandardMaterial color="#3d2b1f" />
+        </mesh>
+      )}
+      {hair === "bun" && (
+        <mesh position={[0, 1.52, -0.12]} castShadow>
+          <sphereGeometry args={[0.11, 10, 10]} />
+          <meshStandardMaterial color="#3d2b1f" />
+        </mesh>
+      )}
+      {glasses && (
+        <>
+          <mesh position={[-0.12, 1.2, 0.31]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.065, 0.012, 8, 16]} />
+            <meshStandardMaterial color="#3f3f46" />
+          </mesh>
+          <mesh position={[0.12, 1.2, 0.31]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.065, 0.012, 8, 16]} />
+            <meshStandardMaterial color="#3f3f46" />
+          </mesh>
+          <mesh position={[0, 1.2, 0.31]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.006, 0.006, 0.06, 6]} />
+            <meshStandardMaterial color="#3f3f46" />
+          </mesh>
+        </>
+      )}
       {crown && (
         <mesh castShadow position={[0, 1.48, 0]}>
           <coneGeometry args={[0.17, 0.22, 6]} />
@@ -404,7 +472,7 @@ function NpcCharacter({
       const dist = Math.hypot(dx, dz);
       if (dist < 0.08) {
         m.sitting = !!target.sit;
-        m.waypointIndex = (m.waypointIndex + 1) % m.waypoints.length;
+        m.waypointIndex = pickNextIndex(m.waypoints.length, m.waypointIndex);
         m.waitUntil =
           now + (target.sit ? 3500 + Math.random() * 4500 : 2000 + Math.random() * 2500);
       } else {
@@ -425,7 +493,11 @@ function NpcCharacter({
 
   return (
     <group ref={groupRef}>
-      <Avatar color={PERSONALITIES[dept].color} />
+      <Avatar
+        color={PERSONALITIES[dept].color}
+        hair={LOOKS[dept].hair}
+        glasses={LOOKS[dept].glasses}
+      />
       <mesh
         position={[0, 0.9, 0]}
         onClick={(e) => {

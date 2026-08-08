@@ -9,7 +9,7 @@ import type {
   DraftIdeaSummary,
   OfficeStatusResponse,
 } from "../api/office-status/route";
-import type { RequestStatus } from "@/lib/types";
+import type { ActivityActor, ActivityLogEntry, RequestStatus } from "@/lib/types";
 
 const CEO_COLOR = "#a78bfa";
 const REQUEST_STEPS: { key: RequestStatus; label: string }[] = [
@@ -17,6 +17,33 @@ const REQUEST_STEPS: { key: RequestStatus; label: string }[] = [
   { key: "in_progress", label: "対応中" },
   { key: "done", label: "完了" },
 ];
+
+const ACTOR_LABELS: Record<ActivityActor, string> = {
+  orchestrator: "統括",
+  cmo: "CMO",
+  cfo: "CFO",
+  secretary: "秘書",
+};
+
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "たった今";
+  if (minutes < 60) return `${minutes}分前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}時間前`;
+  return `${Math.floor(hours / 24)}日前`;
+}
+
+function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
+  return (
+    <div className="hud-activity-row">
+      <span className="hud-activity-actor">{ACTOR_LABELS[entry.actor]}</span>
+      <span className="hud-activity-msg">{entry.message}</span>
+      <span className="hud-activity-time">{timeAgo(entry.created_at)}</span>
+    </div>
+  );
+}
 
 function FaceIcon({ color }: { color: string }) {
   return (
@@ -174,6 +201,17 @@ export default function HudPanel({ status }: { status: OfficeStatusResponse }) {
           </div>
         ) : (
           <p className="empty hud-empty">対応中の依頼はありません</p>
+        )}
+      </section>
+
+      <section>
+        <h2 className="hud-heading">最近の活動ログ</h2>
+        {status.recentActivity.length === 0 ? (
+          <p className="empty hud-empty">まだ記録がありません</p>
+        ) : (
+          status.recentActivity.map((entry) => (
+            <ActivityRow key={entry.id} entry={entry} />
+          ))
         )}
       </section>
 

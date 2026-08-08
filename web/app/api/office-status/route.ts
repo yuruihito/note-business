@@ -1,6 +1,6 @@
 import { hasValidSession } from "@/lib/auth";
-import { getOfficeNames, listIdeas, listRequests } from "@/lib/data";
-import type { RequestStatus } from "@/lib/types";
+import { getOfficeNames, listActivityLog, listIdeas, listRequests } from "@/lib/data";
+import type { ActivityLogEntry, RequestStatus } from "@/lib/types";
 
 export type DeptStatus = {
   status: "working" | "idle";
@@ -29,6 +29,7 @@ export type OfficeStatusResponse = {
   draftIdeas: DraftIdeaSummary[];
   pendingRequestCount: number;
   suggestHiring: boolean;
+  recentActivity: ActivityLogEntry[];
 };
 
 const RECENT_MS = 24 * 60 * 60 * 1000; // consider content "fresh" for 24h
@@ -43,10 +44,11 @@ export async function GET() {
     return new Response(null, { status: 401 });
   }
 
-  const [requests, ideas, names] = await Promise.all([
+  const [requests, ideas, names, recentActivity] = await Promise.all([
     listRequests(),
     listIdeas(),
     getOfficeNames(),
+    listActivityLog(15),
   ]);
 
   const pendingRequests = requests.filter(
@@ -54,11 +56,17 @@ export async function GET() {
   );
   const activeRequest = pendingRequests[0];
 
+  const latestActivityForActiveRequest = activeRequest
+    ? recentActivity.find((a) => a.request_id === activeRequest.id)
+    : undefined;
+
   let cmo: DeptStatus;
   if (activeRequest) {
     cmo = {
       status: "working",
-      message: `「${truncate(activeRequest.text)}」に対応中`,
+      message: latestActivityForActiveRequest
+        ? truncate(latestActivityForActiveRequest.message, 60)
+        : `「${truncate(activeRequest.text)}」に対応中`,
       link: "/requests",
     };
   } else {
@@ -91,11 +99,14 @@ export async function GET() {
     .map((i) => ({ id: i.id, title: i.title, summary: truncate(i.summary, 60) }));
 
   const backlogCount = pendingRequests.length + allDraftIdeas.length;
+  const latestSecretaryActivity = recentActivity.find((a) => a.actor === "secretary");
   const secretary: DeptStatus =
     backlogCount > 0
       ? {
           status: "working",
-          message: `未対応の依頼・企画あわせて${backlogCount}件をサポート中`,
+          message: latestSecretaryActivity
+            ? truncate(latestSecretaryActivity.message, 60)
+            : `未対応の依頼・企画あわせて${backlogCount}件をサポート中`,
           link: null,
         }
       : { status: "idle", message: "今は落ち着いています", link: null };
@@ -111,6 +122,7 @@ export async function GET() {
     draftIdeas,
     pendingRequestCount: pendingRequests.length,
     suggestHiring: pendingRequests.length >= HIRING_SUGGESTION_THRESHOLD,
+    recentActivity,
   };
   return Response.json(response);
 }

@@ -14,6 +14,10 @@ export type DeptStatus = {
   status: "working" | "idle";
   message: string;
   link: string | null;
+  // How far along the current task feels (0..1), used only for the avatar's
+  // facial expression (troubled → smiling as it nears completion). Omitted
+  // when there's no meaningful signal to derive it from.
+  progress?: number;
 };
 
 export type ActiveRequestSummary = {
@@ -73,6 +77,15 @@ export async function GET() {
     ? recentActivity.find((a) => a.request_id === activeRequest.id)
     : undefined;
 
+  // A rough "how close to done" signal for the working expression: each
+  // logged activity step is real forward progress (start → delegate →
+  // receive → write → register), so more of them means genuinely closer to
+  // finishing, not a fabricated number.
+  const EXPECTED_STEPS_PER_REQUEST = 5;
+  const activityCountForActiveRequest = activeRequest
+    ? recentActivity.filter((a) => a.request_id === activeRequest.id).length
+    : 0;
+
   let cmo: DeptStatus;
   if (activeRequest) {
     cmo = {
@@ -81,6 +94,7 @@ export async function GET() {
         ? truncate(latestActivityForActiveRequest.message, 60)
         : `「${truncate(activeRequest.text)}」に対応中`,
       link: "/requests",
+      progress: Math.min(0.85, activityCountForActiveRequest / EXPECTED_STEPS_PER_REQUEST),
     };
   } else {
     const latestIdea = ideas[0];
@@ -95,6 +109,7 @@ export async function GET() {
               ? `企画「${truncate(latestIdea.title, 28)}」を作成しました`
               : `「${truncate(latestIdea.title, 28)}」を検討中`,
           link: `/ideas/${latestIdea.id}`,
+          progress: 0.9,
         }
       : { status: "idle", message: "待機中です", link: null };
   }

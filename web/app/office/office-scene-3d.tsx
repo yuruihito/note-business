@@ -481,6 +481,7 @@ function Avatar({
   hairColor = "#3d2b1f",
   eyebrow = "soft",
   accent,
+  mood = 1,
 }: {
   color: string;
   crown?: boolean;
@@ -489,8 +490,15 @@ function Avatar({
   hairColor?: string;
   eyebrow?: EyebrowStyle;
   accent?: string;
+  // 0 = struggling with a hard task, 1 = relaxed/happy. Idle characters are
+  // always 1; working characters start low and rise as they make real
+  // progress (see the `progress` field on DeptStatus).
+  mood?: number;
 }) {
   const brow = EYEBROW_PRESETS[eyebrow];
+  // Mouth corners lift for a smile or droop for a troubled look — a simple,
+  // unambiguous vertical offset rather than trying to bend a curve.
+  const cornerLift = (mood - 0.5) * 0.034;
   return (
     <group>
       {/* Body (kept small relative to head for a chibi look) */}
@@ -541,6 +549,16 @@ function Avatar({
       {/* Mouth */}
       <mesh position={[0, 1.05, 0.32]} rotation={[0, 0, Math.PI / 2]}>
         <capsuleGeometry args={[0.012, 0.08, 4, 6]} />
+        <meshStandardMaterial color="#b5654f" />
+      </mesh>
+      {/* Mouth corners: rise into a smile when relaxed, droop when working
+          on something tough, based on `mood` */}
+      <mesh position={[-0.052, 1.05 + cornerLift, 0.305]}>
+        <sphereGeometry args={[0.011, 6, 6]} />
+        <meshStandardMaterial color="#b5654f" />
+      </mesh>
+      <mesh position={[0.052, 1.05 + cornerLift, 0.305]}>
+        <sphereGeometry args={[0.011, 6, 6]} />
         <meshStandardMaterial color="#b5654f" />
       </mesh>
       {/* Hair (shape varies per role so silhouettes read as distinct people) */}
@@ -712,6 +730,11 @@ function NpcCharacter({
         hairColor={LOOKS[dept].hairColor}
         eyebrow={LOOKS[dept].eyebrow}
         accent={LOOKS[dept].accent}
+        mood={
+          status.status === "idle"
+            ? 1
+            : Math.max(0.08, Math.min(0.92, status.progress ?? 0.3))
+        }
       />
       <mesh
         position={[0, 0.9, 0]}

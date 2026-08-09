@@ -10,6 +10,8 @@ import {
 } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 import { EDITORIAL_GUIDELINES_KEY } from "@/lib/data";
+import { buildIllustrationPrompt, generateIllustration } from "@/lib/gemini";
+import { composeThumbnail } from "@/lib/thumbnail";
 
 export type FormState = { error?: string } | undefined;
 
@@ -136,16 +138,42 @@ export async function decideIdea(formData: FormData) {
   }
 
   const supabase = getSupabase();
-  const { error } = await supabase
+  const { data: idea, error } = await supabase
     .from("content_ideas")
     .update({
       status: decision,
       decision_reason: reason,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id, title, summary")
+    .single();
 
   if (error) throw new Error(error.message);
+
+  // Thumbnails are generated only for approved ideas — this is the one
+  // moment content actually becomes worth spending a generation call on.
+  // Best-effort: a failure here must never block the approval itself.
+  if (decision === "approved" && idea) {
+    try {
+      const prompt = buildIllustrationPrompt(idea.title, idea.summary);
+      const illustration = await generateIllustration(prompt);
+      const thumbnail = await composeThumbnail(idea.title, illustration);
+      const path = `${idea.id}.png`;
+      const { error: uploadError } = await supabase.storage
+        .from("thumbnails")
+        .upload(path, thumbnail, { contentType: "image/png", upsert: true });
+      if (uploadError) throw new Error(uploadError.message);
+
+      const { data: pub } = supabase.storage.from("thumbnails").getPublicUrl(path);
+      await supabase
+        .from("content_ideas")
+        .update({ thumbnail_url: pub.publicUrl })
+        .eq("id", id);
+    } catch (thumbErr) {
+      console.error("thumbnail generation failed:", thumbErr);
+    }
+  }
 
   revalidatePath("/ideas");
   revalidatePath(`/ideas/${id}`);

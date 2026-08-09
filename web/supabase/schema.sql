@@ -100,3 +100,29 @@ insert into settings (key, value) values (
 3. 有料部分には「他では読めない実務的な価値」を厚く含める。手順・テンプレート・実例・具体的な数値など。無料部分の続きを薄く引き伸ばすだけの水増しは禁止。
 4. 内容に関連する画像を、無料・有料それぞれに最低1枚程度入れる。出典・ライセンスが明確なもの(Unsplash/Pexels/Wikimedia Commons等の再配布可能な画像)に限る。'
 ) on conflict (key) do nothing;
+
+-- Alternates which content type the periodic auto-generation (routine step 3)
+-- produces next: 'general' (a normal note article per editorial_guidelines)
+-- or 'ai_papers' (a roundup of recent AI research papers). The orchestrator
+-- flips this after each auto-generated idea.
+insert into settings (key, value) values (
+  'next_content_type', 'general'
+) on conflict (key) do nothing;
+
+-- Thumbnail image (generated only once CEO approves an idea — see decideIdea
+-- in web/app/actions.ts), stored in the "thumbnails" Storage bucket below.
+alter table content_ideas add column if not exists thumbnail_url text;
+
+-- Public bucket for generated thumbnails. Images are non-sensitive marketing
+-- assets, so public read is fine; writes still require the anon key used by
+-- this app's server-side code.
+insert into storage.buckets (id, name, public)
+values ('thumbnails', 'thumbnails', true)
+on conflict (id) do nothing;
+
+create policy "anon can read thumbnails" on storage.objects
+  for select using (bucket_id = 'thumbnails');
+create policy "anon can upload thumbnails" on storage.objects
+  for insert with check (bucket_id = 'thumbnails');
+create policy "anon can update thumbnails" on storage.objects
+  for update using (bucket_id = 'thumbnails');

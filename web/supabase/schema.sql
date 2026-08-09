@@ -108,3 +108,9 @@ insert into settings (key, value) values (
 insert into settings (key, value) values (
   'next_content_type', 'general'
 ) on conflict (key) do nothing;
+
+-- CEO's real note.com profile, so content-writing sub-agents can fetch it
+-- and match the CEO's actual voice/tone/topics instead of a generic one.
+insert into settings (key, value) values (
+  'note_profile_url', 'https://note.com/yuruihito'
+) on conflict (key) do nothing;

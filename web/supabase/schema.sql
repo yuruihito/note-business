@@ -108,21 +108,3 @@ insert into settings (key, value) values (
 insert into settings (key, value) values (
   'next_content_type', 'general'
 ) on conflict (key) do nothing;
-
--- Thumbnail image (generated only once CEO approves an idea — see decideIdea
--- in web/app/actions.ts), stored in the "thumbnails" Storage bucket below.
-alter table content_ideas add column if not exists thumbnail_url text;
-
--- Public bucket for generated thumbnails. Images are non-sensitive marketing
--- assets, so public read is fine; writes still require the anon key used by
--- this app's server-side code.
-insert into storage.buckets (id, name, public)
-values ('thumbnails', 'thumbnails', true)
-on conflict (id) do nothing;
-
-create policy "anon can read thumbnails" on storage.objects
-  for select using (bucket_id = 'thumbnails');
-create policy "anon can upload thumbnails" on storage.objects
-  for insert with check (bucket_id = 'thumbnails');
-create policy "anon can update thumbnails" on storage.objects
-  for update using (bucket_id = 'thumbnails');

@@ -16,20 +16,6 @@ export default async function IdeaDetailPage({
       <h1>{idea.title}</h1>
       <span className={`badge badge-${idea.status}`}>{idea.status}</span>
 
-      {idea.thumbnail_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={idea.thumbnail_url}
-          alt={`${idea.title} のサムネイル`}
-          style={{ width: "100%", maxWidth: 640, borderRadius: 10, marginTop: "1rem" }}
-        />
-      )}
-      {idea.status === "approved" && !idea.thumbnail_url && (
-        <p className="card-meta" style={{ marginTop: "0.75rem" }}>
-          サムネイル画像は生成できませんでした(Gemini APIの設定を確認してください)。
-        </p>
-      )}
-
       <h2 style={{ marginTop: "1.5rem" }}>概要</h2>
       <p className="prose">{idea.summary}</p>
 

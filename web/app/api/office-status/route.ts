@@ -8,6 +8,7 @@ import {
   listRequests,
 } from "@/lib/data";
 import type { ActivityLogEntry, RequestStatus } from "@/lib/types";
+import { nextRoutineRun, ROUTINE_INTERVAL_HOURS } from "@/lib/schedule";
 
 export type DeptStatus = {
   status: "working" | "idle";
@@ -39,6 +40,8 @@ export type OfficeStatusResponse = {
   suggestHiring: boolean;
   recentActivity: ActivityLogEntry[];
   editorialGuidelines: string;
+  nextRoutineRunAt: string;
+  routineIntervalHours: number;
 };
 
 const RECENT_MS = 24 * 60 * 60 * 1000; // consider content "fresh" for 24h
@@ -139,6 +142,8 @@ export async function GET() {
     suggestHiring: pendingRequests.length >= HIRING_SUGGESTION_THRESHOLD,
     recentActivity,
     editorialGuidelines: editorialGuidelines ?? "",
+    nextRoutineRunAt: nextRoutineRun().toISOString(),
+    routineIntervalHours: ROUTINE_INTERVAL_HOURS,
   };
   return Response.json(response);
 }

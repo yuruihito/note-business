@@ -133,6 +133,8 @@ const DEFAULT_STATUS: OfficeStatusResponse = {
   suggestHiring: false,
   recentActivity: [],
   editorialGuidelines: "",
+  nextRoutineRunAt: new Date().toISOString(),
+  routineIntervalHours: 6,
 };
 
 function deskChairSpot(desk: Vec3): Vec3 {

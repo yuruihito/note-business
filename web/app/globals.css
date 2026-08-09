@@ -446,6 +446,44 @@ button:disabled {
   line-height: 1.5;
 }
 
+.routine-timer {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto;
+}
+
+.routine-timer-track {
+  stroke: var(--border);
+}
+
+.routine-timer-progress {
+  stroke: #2dd4bf;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.routine-timer-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.routine-timer-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.routine-timer-sub {
+  font-size: 0.68rem;
+  color: var(--muted, #6b7280);
+  margin-top: 0.15rem;
+}
+
 .office-panel {
   margin-top: 1rem;
   border: 1px solid var(--border);

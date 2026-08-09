@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { decideIdea } from "../actions";
 import OfficeRequestForm from "./request-form-fields";
+import RoutineTimer from "./routine-timer";
 import { PERSONALITIES, ROLE_LABELS } from "@/lib/office-flavor";
 import type {
   DraftIdeaSummary,
@@ -186,6 +187,14 @@ export default function HudPanel({ status }: { status: OfficeStatusResponse }) {
           「秘書を増やして」のように話しかければ部門を増やせます。
         </div>
       )}
+
+      <section>
+        <h2 className="hud-heading">次の自動執筆</h2>
+        <RoutineTimer
+          nextRunAt={status.nextRoutineRunAt}
+          intervalHours={status.routineIntervalHours}
+        />
+      </section>
 
       <section>
         <h2 className="hud-heading">メンバー</h2>

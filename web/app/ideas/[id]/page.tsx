@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { getIdea } from "@/lib/data";
 import { decideIdea } from "../../actions";
 
@@ -15,6 +16,20 @@ export default async function IdeaDetailPage({
     <>
       <h1>{idea.title}</h1>
       <span className={`badge badge-${idea.status}`}>{idea.status}</span>
+
+      {idea.note_draft_url && (
+        <p className="card-meta" style={{ marginTop: "0.75rem" }}>
+          note下書き:{" "}
+          <Link href={idea.note_draft_url} target="_blank" rel="noreferrer">
+            {idea.note_draft_url}
+          </Link>
+        </p>
+      )}
+      {idea.status === "approved" && !idea.note_draft_url && (
+        <p className="card-meta" style={{ marginTop: "0.75rem" }}>
+          note下書きの保存に失敗しました(手動でnoteに貼り付けてください)。
+        </p>
+      )}
 
       <h2 style={{ marginTop: "1.5rem" }}>概要</h2>
       <p className="prose">{idea.summary}</p>

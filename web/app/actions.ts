@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 import { EDITORIAL_GUIDELINES_KEY } from "@/lib/data";
+import { saveDraftToNote } from "@/lib/note";
 
 export type FormState = { error?: string } | undefined;
 
@@ -136,16 +137,34 @@ export async function decideIdea(formData: FormData) {
   }
 
   const supabase = getSupabase();
-  const { error } = await supabase
+  const { data: idea, error } = await supabase
     .from("content_ideas")
     .update({
       status: decision,
       decision_reason: reason,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id, title, body, summary")
+    .single();
 
   if (error) throw new Error(error.message);
+
+  // Best-effort: note.com has no official API (see lib/note.ts), so this can
+  // fail on its own without blocking the approval itself.
+  if (decision === "approved" && idea) {
+    try {
+      const { draftUrl } = await saveDraftToNote(idea.title, idea.body ?? idea.summary);
+      await supabase.from("content_ideas").update({ note_draft_url: draftUrl }).eq("id", id);
+      await supabase.from("activity_log").insert({
+        actor: "secretary",
+        message: `note下書きを保存しました: ${draftUrl}`,
+        request_id: null,
+      });
+    } catch (noteErr) {
+      console.error("note draft save failed:", noteErr);
+    }
+  }
 
   revalidatePath("/ideas");
   revalidatePath(`/ideas/${id}`);

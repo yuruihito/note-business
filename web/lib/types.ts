@@ -19,6 +19,7 @@ export type ContentIdea = {
   body: string | null;
   status: IdeaStatus;
   decision_reason: string | null;
+  note_draft_url: string | null;
   created_at: string;
   updated_at: string;
 };

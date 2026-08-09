@@ -114,3 +114,7 @@ insert into settings (key, value) values (
 insert into settings (key, value) values (
   'note_profile_url', 'https://note.com/yuruihito'
 ) on conflict (key) do nothing;
+
+-- Where the (unofficial-API) note.com draft ended up, once an idea is
+-- approved — see saveDraftToNote() in web/lib/note.ts.
+alter table content_ideas add column if not exists note_draft_url text;
